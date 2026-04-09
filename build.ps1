@@ -537,15 +537,67 @@ if ($ixxFiles.Count -gt 0) {
         exit 1
     }
 
+    # 模块增量编译缓存（使用确定性哈希）
+    $projPath = [System.IO.Path]::GetFullPath($PWD.Path).ToLower()
+    $projHash = [System.BitConverter]::ToString([System.Security.Cryptography.MD5]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes($projPath))).Replace('-','').Substring(0,8)
+    $modCacheDir = Join-Path $env:TEMP "msvc_mod_cache\$projHash"
+    if (-not (Test-Path $modCacheDir)) { New-Item $modCacheDir -ItemType Directory -Force | Out-Null }
+
+    # 预先恢复所有缓存的 .ifc（MSVC 按模块名命名，非源文件名）
+    Get-ChildItem $modCacheDir -Filter '*.ifc' -ErrorAction SilentlyContinue | ForEach-Object {
+        Copy-Item $_.FullName (Join-Path $PWD $_.Name) -Force
+    }
+
+    $recompiled = @{}
+    $skippedCount = 0
+
     foreach ($ixx in $sorted) {
         $ixxName = [System.IO.Path]::GetFileName($ixx)
-        Write-Host "[模块] 编译 $ixxName" -ForegroundColor Magenta
-        $ixxCmd = "call `"$vcvars`" $arch >nul 2>&1 && cl $baseFlags /c /interface `"$ixx`""
-        cmd.exe /c $ixxCmd
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "[错误] 模块编译失败: $ixxName" -ForegroundColor Red
-            exit 1
+        $objName = [System.IO.Path]::ChangeExtension($ixxName, '.obj')
+        $cachedObj = Join-Path $modCacheDir $objName
+
+        # 判断是否需要重编：缓存不存在 / 源文件更新 / 依赖被重编
+        $needRecompile = $false
+        if (-not (Test-Path $cachedObj)) {
+            $needRecompile = $true
         }
+        elseif ((Get-Item $ixx).LastWriteTime -gt (Get-Item $cachedObj).LastWriteTime) {
+            $needRecompile = $true
+        }
+        else {
+            foreach ($dep in $modFileToRequires[$ixx]) {
+                if ($modNameToFile.ContainsKey($dep) -and $recompiled.ContainsKey($modNameToFile[$dep])) {
+                    $needRecompile = $true; break
+                }
+            }
+        }
+
+        if ($needRecompile) {
+            Write-Host "[模块] 编译 $ixxName" -ForegroundColor Magenta
+            $ixxCmd = "call `"$vcvars`" $arch >nul 2>&1 && cl $baseFlags /c /interface `"$ixx`""
+            cmd.exe /c $ixxCmd
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "[错误] 模块编译失败: $ixxName" -ForegroundColor Red
+                exit 1
+            }
+            # 缓存 .obj
+            $localObj = Join-Path $PWD $objName
+            if (Test-Path $localObj) { Copy-Item $localObj $cachedObj -Force }
+            # 缓存所有新产生的 .ifc
+            Get-ChildItem $PWD -Filter '*.ifc' -ErrorAction SilentlyContinue | ForEach-Object {
+                Copy-Item $_.FullName (Join-Path $modCacheDir $_.Name) -Force
+            }
+            $recompiled[$ixx] = $true
+        }
+        else {
+            $skippedCount++
+            # 恢复 .obj
+            Copy-Item $cachedObj (Join-Path $PWD $objName) -Force
+        }
+    }
+
+    if ($skippedCount -gt 0) {
+        Write-Host "[模块] $skippedCount 个模块未修改，使用缓存" -ForegroundColor DarkGray
     }
 
     $modObjs = @()
