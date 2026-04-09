@@ -70,7 +70,7 @@ VS Code 默认使用的可能是 Windows PowerShell 5.1（`powershell.exe`），
 New-Item "$HOME\bin" -ItemType Directory -Force | Out-Null
 Copy-Item "build.ps1" "$HOME\bin\build.ps1" -Force
 
-# 配置 普通 Windows PowerShell 5.1 的环境变量（可选，兼容老终端）
+# 配置 普通 Windows PowerShell 5.1 的环境变量
 New-Item "$HOME\Documents\WindowsPowerShell" -ItemType Directory -Force | Out-Null
 Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1" -Force
 
