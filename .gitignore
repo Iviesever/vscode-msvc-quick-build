@@ -1,0 +1,14 @@
+# 忽略测试目录
+test_cpp23/
+
+# 编译中间产物和可执行文件
+*.exe
+*.obj
+*.ifc
+
+# IDE 和系统缓存
+.vscode/
+.vs/
+.idea/
+msvc_build_scan_*/
+msvc_std_module_cache/
