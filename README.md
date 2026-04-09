@@ -16,18 +16,7 @@
 
 下载地址：<https://visualstudio.microsoft.com/zh-hans/downloads/>
 
-### 2. 安装 PowerShell 7（pwsh）
-
-本工具 **必须在 pwsh（PowerShell 7）中运行**，不兼容 Windows 自带的 Windows PowerShell 5.1。
-
-#### 怎么区分 PS5 和 PS7？
-
-| | Windows PowerShell 5.1（系统自带） | PowerShell 7（需要安装） |
-|---|---|---|
-| 可执行文件 | `powershell.exe` | `pwsh.exe` |
-| 默认路径 | `C:\Windows\System32\WindowsPowerShell\` | `C:\Program Files\PowerShell\7\` |
-| Profile 目录 | `Documents\WindowsPowerShell\` | `Documents\PowerShell\` |
-| 图标 | 蓝底白字 | 黑底蓝字 |
+### 2. 安装 PowerShell 7（可选）
 
 #### 下载安装 PS7
 
@@ -47,9 +36,9 @@ pwsh --version
 
 能看到 `PowerShell 7.x.x` 就对了。
 
-### 3. 将 VS Code 默认终端设为 pwsh
+### 3. 将 VS Code 默认终端设为 pwsh（可选）
 
-VS Code 默认使用的可能是 Windows PowerShell 5.1（`powershell.exe`），需要切换到 PS7 才能使用 `build` 命令。
+VS Code 默认使用的可能是 Windows PowerShell 5.1（`powershell.exe`），可以切换到 PS7 使用 `build` 命令。
 
 #### 设置页面
 
@@ -71,8 +60,8 @@ VS Code 默认使用的可能是 Windows PowerShell 5.1（`powershell.exe`），
 | 文件 | 复制到 | 说明 |
 |------|--------|------|
 | `build.ps1` | `C:\Users\<用户名>\bin\build.ps1` | 编译脚本本体 |
-| `Microsoft.PowerShell_profile.ps1` | `C:\Users\<用户名>\Documents\PowerShell\Microsoft.PowerShell_profile.ps1` | PS7 Profile，注册 `build` 命令 |
-| | `C:\Users\<用户名>\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1` | PS5 Profile，注册 `build` 命令（可选） |
+| ``Microsoft.PowerShell_profile.ps1`` | `C:\Users\<用户名>\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1` | PS5 Profile，注册 `build` 命令 |
+| `Microsoft.PowerShell_profile.ps1`（可选） | `C:\Users\<用户名>\Documents\PowerShell\Microsoft.PowerShell_profile.ps1`（可选） | PS7 Profile，注册 `build` 命令（可选） |
 
 可以手动复制，也可以跑以下命令一键部署：
 
@@ -81,18 +70,18 @@ VS Code 默认使用的可能是 Windows PowerShell 5.1（`powershell.exe`），
 New-Item "$HOME\bin" -ItemType Directory -Force | Out-Null
 Copy-Item "build.ps1" "$HOME\bin\build.ps1" -Force
 
-# 配置 PowerShell 7 (pwsh) 的环境变量
-New-Item "$HOME\Documents\PowerShell" -ItemType Directory -Force | Out-Null
-Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1" -Force
-
 # 配置 普通 Windows PowerShell 5.1 的环境变量（可选，兼容老终端）
 New-Item "$HOME\Documents\WindowsPowerShell" -ItemType Directory -Force | Out-Null
 Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1" -Force
+
+# 配置 PowerShell 7 (pwsh) 的环境变量（可选）
+New-Item "$HOME\Documents\PowerShell" -ItemType Directory -Force | Out-Null
+Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1" -Force
 ```
 
-部署完成后，**重启 VS Code 终端**（或新开一个 pwsh 终端），输入 `build` 看到用法提示就成功了。
+部署完成后，**重启 VS Code 终端**，输入 `build` 看到用法提示就成功了。
 
-> Profile 在每次打开 pwsh 时自动加载。如果修改了 Profile 文件，需要重开终端才能生效。
+> Profile 在每次打开终端时自动加载。如果修改了 Profile 文件，需要重开终端才能生效。
 
 ---
 
@@ -377,15 +366,6 @@ export void do_something() {
 ---
 
 ## 常见问题
-
-### Q: `build` 提示 "无法识别的命令"
-
-**原因：** 你可能在 Windows PowerShell 5.1 中运行，而不是 PS7。
-
-**解决：**
-1. 确认已安装 PS7（见上方 [安装 PowerShell 7](#2-安装-powershell-7pwsh) 部分）
-2. 确认 VS Code 默认终端已设为 pwsh（见上方 [VS Code 设置](#3-将-vs-code-默认终端设为-pwsh) 部分）
-3. 确认 Profile 文件已部署到 `Documents\PowerShell\`（而不是 `Documents\WindowsPowerShell\`）
 
 ### Q: "Visual Studio not found"
 
