@@ -1,113 +1,57 @@
 # VS Code + MSVC 快速编译工具
 
-> 不需要 `.sln`、`.vcxproj`、`CMakeLists.txt`、`launch.json`、`tasks.json`、`c_cpp_properties.json`、`settings.json` 等。
+> **一个 PowerShell 脚本，让你在 VS Code 里按 F5 就能编译运行 C/C++。**
 >
-> 一行命令，直接在 VS Code 的终端使用 VS 2026 的 MSVC 编译器编译 C/C++ 文件。 
->
-> **支持 C++20/23 Modules（`.ixx`）和 `import std;` / `import std.compat;`（自动缓存）**。
+> 无需 `.sln`、`CMakeLists.txt`、`tasks.json` 等配置文件。  
+> 支持 C++20/23 Modules、`import std;`、智能依赖追踪、增量构建。
 
 ---
 
-## 前置要求
-
-### 1. 安装 Visual Studio
-
-需要安装 Visual Studio（Community 版免费），并勾选 **"使用 C++ 的桌面开发"** 工作负载。
-
-下载地址：<https://visualstudio.microsoft.com/zh-hans/downloads/>
-
-### 2. 安装 PowerShell 7（可选）
-
-#### 下载安装 PS7
-
-**官网下载 MSI 安装包**
-
-1. 打开 <https://github.com/PowerShell/PowerShell/releases/latest>
-2. 在 Assets 区域下载 `PowerShell-7.x.x-win-x64.msi`
-3. 双击安装，一路默认即可
-
-#### 验证安装
-
-安装后打开任意终端执行：
-
-```
-pwsh --version
-```
-
-能看到 `PowerShell 7.x.x` 就对了。
-
-### 3. 将 VS Code 默认终端设为 pwsh（可选）
-
-VS Code 默认使用的可能是 Windows PowerShell 5.1（`powershell.exe`），可以切换到 PS7 使用 `build` 命令。
-
-#### 设置页面
-
-1. 打开 VS Code
-2. `Ctrl + ,` 打开设置
-3. 搜索 `terminal default profile windows`
-4. 在 **Terminal › Integrated › Default Profile: Windows** 下拉菜单中选择 **PowerShell**（不是 "Windows PowerShell"）
-
-> 下拉菜单中有两个选项容易混淆：
-> - **Windows PowerShell** → 这是 5.1，不要选
-> - **PowerShell** → 这是 7.x，选这个
-
----
-
-## 安装部署
-
-项目包含两个文件，需要手动复制到指定位置：
-
-| 文件 | 复制到 | 说明 |
-|------|--------|------|
-| `build.ps1` | `C:\Users\<用户名>\bin\build.ps1` | 编译脚本本体 |
-| ``Microsoft.PowerShell_profile.ps1`` | `C:\Users\<用户名>\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1` | PS5 Profile，注册 `build` 命令 |
-| `Microsoft.PowerShell_profile.ps1`（可选） | `C:\Users\<用户名>\Documents\PowerShell\Microsoft.PowerShell_profile.ps1`（可选） | PS7 Profile，注册 `build` 命令（可选） |
-
-可以手动复制，也可以跑以下命令一键部署：
+## 30 秒快速体验
 
 ```powershell
-# 在本项目目录中执行
+# 1. 部署（只需执行一次）
 New-Item "$HOME\bin" -ItemType Directory -Force | Out-Null
 Copy-Item "build.ps1" "$HOME\bin\build.ps1" -Force
-
-# 配置 普通 Windows PowerShell 5.1 的环境变量
 New-Item "$HOME\Documents\WindowsPowerShell" -ItemType Directory -Force | Out-Null
 Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1" -Force
 
-# 配置 PowerShell 7 (pwsh) 的环境变量（可选）
-New-Item "$HOME\Documents\PowerShell" -ItemType Directory -Force | Out-Null
-Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1" -Force
-```
-
-部署完成后，**重启 VS Code 终端**，输入 `build` 看到用法提示就成功了。
-
-> Profile 在每次打开终端时自动加载。如果修改了 Profile 文件，需要重开终端才能生效。
-
----
-
-## 快速开始
-
-```powershell
-# 编译并运行
-build hello.c -run
-
-# C++ 多文件
-build main.cpp utils.cpp -o myapp -run
-
-# C++ Modules
-build main.cpp mymod.ixx -o app -std latest -run
-
-# 传参
-build solver.c -run -a "input.txt 42"
+# 2. 重启终端，然后随便找个 .cpp 文件试试
+build hello.cpp -run
 ```
 
 ---
 
-## 一键编译运行（F5）
+## ⭐ 核心体验：F5 一键编译运行
 
-不想每次手打命令？可以配置 VS Code 快捷键，按 F5 自动智能追踪依赖并编译运行。
+配置后，在 VS Code 中编辑任何 C/C++ 文件，**按 F5 即可自动编译并运行**。
 
-打开 VS Code 键盘快捷方式配置：`Ctrl + Shift + P` → 输入 `Open Keyboard Shortcuts (JSON)`，在 `[]` 中加入：
+### 它会做什么？
+
+```
+按下 F5
+  │
+  ├─ 自动弹出终端，cd 到当前文件目录
+  ├─ 智能追踪当前文件的 #include 和 import 依赖
+  ├─ 只编译相关文件，不拖入无关源文件
+  ├─ 代码没改？跳过编译，直接运行上次的 exe
+  └─ 代码改了？重新编译，然后运行
+```
+
+### 使用场景
+
+```
+同一个文件夹下：
+├── 作业1.cpp          ← 焦点在这里按 F5：只编译运行 作业1.cpp
+├── 作业2.cpp          ← 焦点在这里按 F5：只编译运行 作业2.cpp
+├── main.cpp           ← 焦点在这里按 F5：自动发现 lib.cpp，一起编译
+├── lib.h
+└── lib.cpp            ← 焦点在这里按 F5：反向追踪到 main.cpp，一起编译
+```
+
+### 配置方法
+
+`Ctrl + Shift + P` → 输入 `Open Keyboard Shortcuts (JSON)` → 在 `[]` 中加入：
 
 ```json
 {
@@ -128,197 +72,125 @@ build solver.c -run -a "input.txt 42"
 }
 ```
 
-效果：
-- 终端自动弹出并 `cd` 到文件所在目录
-- 通过 `-smart` 自动追踪当前文件的 `#include` 和 `import` 依赖
-- 只编译相关文件，不会拖入同目录下无关的源文件
-- 代码未修改时自动跳过编译，直接运行
+---
 
-## 参数一览
+## 安装
 
-| 参数 | 别名 | 类型 | 说明 |
-|------|------|------|------|
-| `Sources` | (位置参数) | `string[]` | 源文件，支持通配符 `*.c` `*.cpp` `*.ixx` |
-| `-o` | `-output` | `string` | 输出文件名（不含 `.exe`），默认取第一个源文件名 |
-| `-run` | | `switch` | 编译成功后自动运行 |
-| `-std` | | `string` | C++ 标准：`14` / `17` / `20` / `23` / `latest` |
-| `-ProgramArgs` | `-a` | `string` | 运行时传给程序的命令行参数 |
-| `-x86` | | `switch` | 编译为 32 位（默认 64 位） |
-| `-smart` | | `switch` | 智能模式：自动追踪关联文件 |
-| `-I` | | `string[]` | 额外的头文件搜索路径（可多个） |
-| `-L` | | `string[]` | 额外的库文件搜索路径（可多个） |
-| `-libs` | | `string[]` | 要链接的库（不含 `.lib`，可多个） |
+### 前置要求
+
+- **Visual Studio**（Community 免费版即可），勾选 **"使用 C++ 的桌面开发"**  
+  下载：<https://visualstudio.microsoft.com/zh-hans/downloads/>
+
+### 部署脚本
+
+在本项目目录中执行：
+
+```powershell
+New-Item "$HOME\bin" -ItemType Directory -Force | Out-Null
+Copy-Item "build.ps1" "$HOME\bin\build.ps1" -Force
+
+# Windows PowerShell 5.1（系统自带）
+New-Item "$HOME\Documents\WindowsPowerShell" -ItemType Directory -Force | Out-Null
+Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1" -Force
+
+# PowerShell 7（如果你安装了的话）
+New-Item "$HOME\Documents\PowerShell" -ItemType Directory -Force | Out-Null
+Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1" -Force
+```
+
+部署完成后，**重启终端**，输入 `build` 看到帮助信息就成功了。
 
 ---
 
-## 使用示例
+## 使用方式
 
-### 1. 单个 C 文件
-
-```powershell
-build main.c -run
-```
+### 基础用法
 
 ```powershell
-[编译] main.c -> main.exe
-main.c
-[成功] main.exe
-
-[运行] main.exe
-========================================
-Hello, World!
-========================================
-[结束] 退出码: 0
+build main.c -run                            # 编译并运行
+build solver.cpp -std 23 -run                # 指定 C++ 标准
+build main.cpp utils.cpp -o myapp -run       # 多文件 + 指定输出名
+build *.cpp -o app -run                      # 通配符（自动过滤 .h .txt 等）
+build processor.c -run -a "input.txt 42"     # 向程序传递命令行参数
+build legacy.c -x86 -run                     # 32 位编译
 ```
 
-### 2. C++ + 指定标准
+### 智能追踪（`-smart`）
+
+`-smart` 是本工具的核心能力。它从当前文件出发，自动扫描同目录下所有源文件的 `#include` 和 `import` 语句，通过 BFS（广度优先搜索）建立双向依赖图，找出完整的关联文件集合。
 
 ```powershell
-build solver.cpp -std 23 -run
+build main.cpp -smart -run       # 自动追踪 main.cpp 的所有依赖并编译
+build lib.cpp -smart -run        # 从 lib.cpp 反向追踪，也能找到 main.cpp
+build homework1.cpp -smart -run  # 独立文件就只编译自身，不拖入其他文件
 ```
 
-### 3. 多文件项目
+**技术细节：**
+- 先剥离所有注释（`//` 和 `/* */`），再扫描 `#include` / `import`
+- `#include "lib.h"` → 自动关联同名的 `lib.cpp`（头文件 ↔ 实现文件匹配）
+- `import mymod;` → 自动关联提供该模块的 `.ixx` 文件
+- `import std;` / `import std.compat;` 不参与追踪（由缓存系统处理）
 
-```powershell
-build main.cpp utils.cpp math.cpp -o myapp -run
-```
+### 增量构建
 
-### 4. 通配符 `*`
+无需任何配置，自动生效。编译前会比较 `.exe` 与所有关联源文件/头文件的修改时间：
 
-```powershell
-build *.c -o myapp -run
-build *.cpp -o myapp -std 20 -run
-```
+- **所有文件都没改** → `[跳过] 代码未修改`，直接运行，0 编译等待
+- **任何一个文件改了** → 触发重新编译
 
-> 通配符自动过滤，只接受 `.c` `.cpp` `.cxx` `.cc` `.ixx` 文件。  
-> 
-> 即使目录里有 `.h` `.txt` 等文件也不会误传给编译器。
-
-### 5. C++ Modules（`.ixx` + `import`）
-
-```
-project/
-├── main.cpp       # import std; import mymod;
-└── mymod.ixx      # export module mymod; import std;
-```
+### C++ Modules（`.ixx`）
 
 ```powershell
 build main.cpp mymod.ixx -o app -std latest -run
 ```
 
-### 6. 传参给程序
+脚本会自动处理：
+1. 调用 `cl /scanDependencies` 扫描模块依赖（P1689 JSON，100% 准确）
+2. 拓扑排序，按正确顺序编译（即使传入顺序是乱的）
+3. `import std;` / `import std.compat;` 首次编译后自动缓存到 `%TEMP%`
 
-```powershell
-build processor.c -run -a "input.txt output.txt"
-```
-
-### 7. 32 位编译
-
-```powershell
-build legacy.c -x86 -run
-```
-
-### 8. 智能追踪（`-smart`）
-
-同一目录下有多个互不相关的源文件时，`-smart` 只编译当前文件及其依赖：
-
-```
-project/
-├── homework1.cpp    # 独立文件
-├── homework2.cpp    # 独立文件
-├── main.cpp         # #include "lib.h"
-├── lib.h
-└── lib.cpp
-```
-
-```powershell
-# 焦点在 homework1.cpp → 只编译 homework1.cpp
-build homework1.cpp -smart -run
-
-# 焦点在 main.cpp → 自动发现 lib.cpp，一起编译
-build main.cpp -smart -run
-
-# 焦点在 lib.cpp → 反向追踪，也能找到 main.cpp
-build lib.cpp -smart -run
-```
-
-> `-smart` 通过分析 `#include "..."` 和 `import` 语句建立双向依赖图，
-> 使用 BFS 找出当前文件的完整关联集合。注释中的 include/import 会被正确忽略。
-
-### 9. 增量构建
-
-代码未修改时，脚本自动跳过编译，直接运行已有的 `.exe`：
-
-```
-[跳过] 代码未修改
-
-[运行] main.exe
-========================================
-Hello, World!
-========================================
-[结束] 退出码: 0
-```
-
-> 判断依据：比较 `.exe` 和所有源文件/头文件的修改时间。
-> 任何一个文件被修改过，就会触发重新编译。
-
-### 10. 第三方库
+### 第三方库
 
 ```powershell
 build main.cpp -I D:\libs\SDL2\include -L D:\libs\SDL2\lib -libs SDL2,SDL2main -run
 ```
 
-多个路径用多个 `-I` / `-L`：
+---
 
-```powershell
-build main.cpp -I D:\libs\SDL2\include -I D:\libs\glew\include -L D:\libs\SDL2\lib -L D:\libs\glew\lib -libs SDL2,SDL2main,glew32 -run
-```
+## 参数一览
+
+| 参数 | 别名 | 说明 |
+|------|------|------|
+| `Sources` | (位置参数) | 源文件，支持通配符 |
+| `-o` | `-output` | 输出文件名（不含 `.exe`） |
+| `-run` | | 编译成功后自动运行 |
+| `-std` | | C++ 标准：`14` / `17` / `20` / `23` / `latest` |
+| `-smart` | | 智能模式：自动追踪依赖 |
+| `-a` | `-ProgramArgs` | 运行时传给程序的参数 |
+| `-x86` | | 编译为 32 位（默认 64 位） |
+| `-I` | | 头文件搜索路径（可多个） |
+| `-L` | | 库文件搜索路径（可多个） |
+| `-libs` | | 链接的库名（不含 `.lib`，可多个） |
 
 ---
 
-## C++ Modules 工作原理
+## 支持的文件类型
 
-检测到 `.ixx` 文件时，脚本使用 MSVC 原生的 `/scanDependencies` 扫描模块依赖（P1689 JSON），然后自动拓扑排序、多阶段编译：
+| 扩展名 | 说明 |
+|--------|------|
+| `.c` | C 源文件 |
+| `.cpp` `.cxx` `.cc` | C++ 源文件 |
+| `.ixx` | C++ 模块接口（自动用 `/interface` 编译） |
 
-```
-build main.cpp top.ixx mid.ixx base.ixx -o app -std latest -run
-  │
-  ├─ [模块]  调用 cl /scanDependencies 扫描每个 .ixx 的依赖关系
-  │          由编译器自己做词法分析，100% 准确
-  │          正确处理注释、字符串、export import、模块分区等
-  │
-  ├─ [标准]  检测到 'import std;' 或 'import std.compat;'
-  │          → 首次编译并缓存到 %TEMP%\msvc_std_module_cache\
-  │          → 后续直接使用缓存
-  │
-  ├─ [模块]  按拓扑排序结果逐个编译 .ixx
-  │          → base.ixx（无依赖，最先编译）
-  │          → mid.ixx（依赖 base，第二编译）
-  │          → top.ixx（依赖 base + mid，最后编译）
-  │          即使传入顺序是乱的，也能自动推断正确编译顺序
-  │
-  ├─ [链接]  编译 .cpp 并链接所有 .obj
-  │
-  └─ 自动清理 .obj / .ifc 中间文件
-```
+通配符 `*` 会自动过滤掉 `.h` `.hpp` `.txt` 等非源文件。
 
-### std 模块缓存
+---
 
-`import std;` 和 `import std.compat;` 需要预编译标准库模块（约 2-3 秒）。脚本会自动将编译产物缓存到 `%TEMP%\msvc_std_module_cache\`，后续构建直接复用：
-
-```
-首次编译：[标准] 首次编译 std 模块（编译后将缓存）...
-后续编译：[标准] 使用缓存的 std 模块
-```
-
-> 若更新了 Visual Studio 版本，删除缓存目录即可重建：
-> ```powershell
-> Remove-Item "$env:TEMP\msvc_std_module_cache" -Recurse -Force
-> ```
+## 高级话题
 
 ### 模块中使用 #include
 
-自己的头文件放在 **global module fragment** 中（`module;` ~ `export module` 之间）：
+自己的头文件放在 **global module fragment**（`module;` ~ `export module` 之间）：
 
 ```cpp
 module;                          // global module fragment 开始
@@ -335,51 +207,16 @@ export void do_something() {
 }
 ```
 
-> **禁止在 `export module` 之后 `#include` 标准库头文件**  
-> 
-> 和 `import std;` 混用会导致符号重定义。自己的头文件放 global module 没问题。
+> **禁止在 `export module` 之后 `#include` 标准库头文件**，和 `import std;` 混用会导致符号重定义。
 
----
-
-## 默认编译选项
-
-| 选项 | 说明 |
-|------|------|
-| `/nologo` | 不显示编译器版本横幅 |
-| `/W3` | 警告等级 3（推荐） |
-| `/utf-8` | UTF-8 编码 |
-| `/EHsc` | C++ 异常处理 |
-
----
-
-## 支持的文件类型
-
-| 扩展名 | 语言 | 说明 |
-|--------|------|------|
-| `.c` | C | 标准 C 源文件 |
-| `.cpp` `.cxx` `.cc` | C++ | C++ 源文件 |
-| `.ixx` | C++ Module | 模块接口，自动用 `/interface` 编译 |
-
-其他文件（`.h` `.hpp` `.txt` 等）会被通配符自动过滤掉。
-
-
----
-
-## 常见问题
-
-### Q: "Visual Studio not found"
-
-确认安装了 VS 并勾选了 **"使用 C++ 的桌面开发"** 工作负载。
-
-### Q: `import std;` 报错
-
-确保使用 `-std latest` 或 `-std 23`，且安装了最新 MSVC 工具集。
-
-### Q: 想加调试 / 优化选项
+### 自定义编译选项
 
 编辑 `~/bin/build.ps1` 中的 `$baseFlags`：
 
 ```powershell
+# 默认
+$baseFlags = '/nologo /W3 /utf-8 /EHsc'
+
 # 调试
 $baseFlags = '/nologo /W3 /utf-8 /EHsc /Zi /Od'
 
@@ -387,10 +224,23 @@ $baseFlags = '/nologo /W3 /utf-8 /EHsc /Zi /Od'
 $baseFlags = '/nologo /W3 /utf-8 /EHsc /O2'
 ```
 
-### Q: 适合多大的项目？
+### std 模块缓存
 
-适合**课程作业、小型练习、快速原型**。 
-大型项目（复杂工具链、大规模依赖管理）建议直接用 VS2026。
+`import std;` 首次编译需要约 2-3 秒，之后自动缓存。若更新了 Visual Studio 版本导致编译报错，清除缓存即可：
+
+```powershell
+Remove-Item "$env:TEMP\msvc_std_module_cache" -Recurse -Force
+```
+
+---
+
+## 常见问题
+
+**Q: `import std;` 报错**  
+确保使用 `-std latest` 或 `-std 23`，且安装了最新 MSVC 工具集。
+
+**Q: 适合多大的项目？**  
+适合课程作业、小型练习、快速原型。大型项目建议直接用 Visual Studio。
 
 ---
 
