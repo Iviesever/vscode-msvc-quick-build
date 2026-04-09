@@ -630,7 +630,8 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "[成功] $o.exe" -ForegroundColor Green
 
-Remove-Item (Join-Path $PWD '*.obj'), (Join-Path $PWD '*.ifc') -Force -ErrorAction SilentlyContinue
+Get-ChildItem $PWD -Filter '*.obj' -File -ErrorAction SilentlyContinue | Remove-Item -Force
+Get-ChildItem $PWD -Filter '*.ifc' -File -ErrorAction SilentlyContinue | Remove-Item -Force
 
 if ($run) {
     Write-Host ''
