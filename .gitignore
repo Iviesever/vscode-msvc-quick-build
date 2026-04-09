@@ -5,6 +5,7 @@ test_cpp23/
 *.exe
 *.obj
 *.ifc
+*.zip
 
 # IDE 和系统缓存
 .vscode/
