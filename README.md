@@ -2,52 +2,44 @@
 
 > **一个 PowerShell 脚本，让你在 VS Code 里按 F5 就能编译运行 C/C++。**
 >
-> 无需 `.sln`、`CMakeLists.txt`、`tasks.json` 等配置文件。  
+> 无需 `.sln`、`CMakeLists.txt`、`launch.json` 等配置文件。 
+>
 > 支持 C++20/23 Modules、`import std;`、智能依赖追踪、增量构建。
 
 ---
 
-## 30 秒快速体验
+## 安装部署
+
+### 前置要求
+
+- **Visual Studio**（Community 免费版即可），勾选 **"使用 C++ 的桌面开发"** 
+  下载：<https://visualstudio.microsoft.com/zh-hans/downloads/>
+
+### 部署脚本
+
+在本项目目录中执行：
 
 ```powershell
-# 1. 部署（只需执行一次）
 New-Item "$HOME\bin" -ItemType Directory -Force | Out-Null
 Copy-Item "build.ps1" "$HOME\bin\build.ps1" -Force
+
+# Windows PowerShell 5.1（系统自带）
 New-Item "$HOME\Documents\WindowsPowerShell" -ItemType Directory -Force | Out-Null
 Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1" -Force
 
-# 2. 重启终端，然后随便找个 .cpp 文件试试
-build hello.cpp -run
+# PowerShell 7（如果你安装了的话）
+New-Item "$HOME\Documents\PowerShell" -ItemType Directory -Force | Out-Null
+Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1" -Force
 ```
+
+部署完成后，**重启终端**，输入 `build` 看到帮助信息就成功了。
 
 ---
 
-## ⭐ 核心体验：F5 一键编译运行
+
+## 核心自动配置
 
 配置后，在 VS Code 中编辑任何 C/C++ 文件，**按 F5 即可自动编译并运行**。
-
-### 它会做什么？
-
-```
-按下 F5
-  │
-  ├─ 自动弹出终端，cd 到当前文件目录
-  ├─ 智能追踪当前文件的 #include 和 import 依赖
-  ├─ 只编译相关文件，不拖入无关源文件
-  ├─ 代码没改？跳过编译，直接运行上次的 exe
-  └─ 代码改了？重新编译，然后运行
-```
-
-### 使用场景
-
-```
-同一个文件夹下：
-├── 作业1.cpp          ← 焦点在这里按 F5：只编译运行 作业1.cpp
-├── 作业2.cpp          ← 焦点在这里按 F5：只编译运行 作业2.cpp
-├── main.cpp           ← 焦点在这里按 F5：自动发现 lib.cpp，一起编译
-├── lib.h
-└── lib.cpp            ← 焦点在这里按 F5：反向追踪到 main.cpp，一起编译
-```
 
 ### 配置方法
 
@@ -72,37 +64,33 @@ build hello.cpp -run
 }
 ```
 
----
+### 它会做什么？
 
-## 安装
-
-### 前置要求
-
-- **Visual Studio**（Community 免费版即可），勾选 **"使用 C++ 的桌面开发"**  
-  下载：<https://visualstudio.microsoft.com/zh-hans/downloads/>
-
-### 部署脚本
-
-在本项目目录中执行：
-
-```powershell
-New-Item "$HOME\bin" -ItemType Directory -Force | Out-Null
-Copy-Item "build.ps1" "$HOME\bin\build.ps1" -Force
-
-# Windows PowerShell 5.1（系统自带）
-New-Item "$HOME\Documents\WindowsPowerShell" -ItemType Directory -Force | Out-Null
-Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1" -Force
-
-# PowerShell 7（如果你安装了的话）
-New-Item "$HOME\Documents\PowerShell" -ItemType Directory -Force | Out-Null
-Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1" -Force
+```
+按下 F5
+  │
+  ├─ 自动弹出终端，cd 到当前文件目录
+  ├─ 智能追踪当前文件的 #include 和 import 依赖
+  ├─ 只编译相关文件，不拖入无关源文件
+  ├─ 代码没改？跳过编译，直接运行上次的 exe
+  └─ 代码改了？重新编译，然后运行
 ```
 
-部署完成后，**重启终端**，输入 `build` 看到帮助信息就成功了。
+### 使用场景
 
----
+```
+同一个文件夹下：
+├── 作业1.cpp          ← 焦点在这里按 F5：只编译运行 作业1.cpp
+├── 作业2.cpp          ← 焦点在这里按 F5：只编译运行 作业2.cpp
+├── main.cpp           ← 焦点在这里按 F5：自动发现 lib.cpp，一起编译
+├── lib.h
+└── lib.cpp            ← 焦点在这里按 F5：反向追踪到 main.cpp，一起编译
+```
 
-## 使用方式
+------
+
+
+## 终端使用方式
 
 ### 基础用法
 
@@ -130,13 +118,6 @@ build homework1.cpp -smart -run  # 独立文件就只编译自身，不拖入其
 - `#include "lib.h"` → 自动关联同名的 `lib.cpp`（头文件 ↔ 实现文件匹配）
 - `import mymod;` → 自动关联提供该模块的 `.ixx` 文件
 - `import std;` / `import std.compat;` 不参与追踪（由缓存系统处理）
-
-### 增量构建
-
-无需任何配置，自动生效。编译前会比较 `.exe` 与所有关联源文件/头文件的修改时间：
-
-- **所有文件都没改** → `[跳过] 代码未修改`，直接运行，0 编译等待
-- **任何一个文件改了** → 触发重新编译
 
 ### C++ Modules（`.ixx`）
 
@@ -236,10 +217,10 @@ Remove-Item "$env:TEMP\msvc_std_module_cache" -Recurse -Force
 
 ## 常见问题
 
-**Q: `import std;` 报错**  
+**Q: `import std;` 报错** 
 确保使用 `-std latest` 或 `-std 23`，且安装了最新 MSVC 工具集。
 
-**Q: 适合多大的项目？**  
+**Q: 适合多大的项目？** 
 适合课程作业、小型练习、快速原型。大型项目建议直接用 Visual Studio。
 
 ---
