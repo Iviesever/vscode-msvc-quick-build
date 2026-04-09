@@ -104,7 +104,7 @@ if ($smart -and $files.Count -gt 0) {
     $dir = [System.IO.Path]::GetDirectoryName($focusedFile)
 
     $allCandidates = @{}
-    $dirItems = Get-ChildItem $dir -File | Where-Object { $_.Extension -match '^\.(?:c|cpp|cxx|cc|ixx|h|hpp)$' }
+    $dirItems = Get-ChildItem $dir -File -Recurse | Where-Object { $_.Extension -match '^\.(?:c|cpp|cxx|cc|ixx|h|hpp)$' }
     foreach ($f in $dirItems) {
         $raw = Get-Content $f.FullName -Raw -ErrorAction SilentlyContinue
         if (-not $raw) { $raw = '' }
@@ -133,14 +133,16 @@ if ($smart -and $files.Count -gt 0) {
 
         foreach ($m in [regex]::Matches($content, '#include\s+"([^"]+)"')) {
             $headerName = $m.Groups[1].Value
-            $headerPath = [System.IO.Path]::GetFullPath((Join-Path $dir $headerName))
+            $includerDir = [System.IO.Path]::GetDirectoryName($path)
+            $headerPath = [System.IO.Path]::GetFullPath((Join-Path $includerDir $headerName))
             if ($allCandidates.ContainsKey($headerPath)) {
                 $depGraph[$path] += $headerPath
                 $depGraph[$headerPath] += $path
 
                 $hdrBase = [System.IO.Path]::GetFileNameWithoutExtension($headerName)
+                $hdrDir = [System.IO.Path]::GetDirectoryName($headerPath)
                 foreach ($ext in @('.cpp', '.c', '.cxx', '.cc')) {
-                    $implPath = [System.IO.Path]::GetFullPath((Join-Path $dir "$hdrBase$ext"))
+                    $implPath = [System.IO.Path]::GetFullPath((Join-Path $hdrDir "$hdrBase$ext"))
                     if ($allCandidates.ContainsKey($implPath)) {
                         $depGraph[$headerPath] += $implPath
                         $depGraph[$implPath] += $headerPath
@@ -187,8 +189,13 @@ if ($smart -and $files.Count -gt 0) {
     }
 
     if ($files.Count -gt 1) {
-        $discoveredNames = ($files | ForEach-Object { [System.IO.Path]::GetFileName($_) }) -join ', '
-        Write-Host "[智能] 关联: $discoveredNames" -ForegroundColor DarkGray
+        if ($files.Count -le 8) {
+            $discoveredNames = ($files | ForEach-Object { [System.IO.Path]::GetFileName($_) }) -join ', '
+            Write-Host "[智能] 关联: $discoveredNames" -ForegroundColor DarkGray
+        } else {
+            $first5 = ($files | Select-Object -First 5 | ForEach-Object { [System.IO.Path]::GetFileName($_) }) -join ', '
+            Write-Host "[智能] 关联: $first5, ... 共 $($files.Count) 个文件" -ForegroundColor DarkGray
+        }
     }
 
     if (-not $o) {
