@@ -383,6 +383,23 @@ if ($ixxFiles.Count -gt 0) {
     $scanDir = Join-Path $env:TEMP "msvc_build_scan_$$"
     New-Item $scanDir -ItemType Directory -Force | Out-Null
 
+    # 批量扫描：只调一次 vcvarsall，所有 .ixx 一起扫
+    $scanBat = Join-Path $scanDir '_scan_all.bat'
+    $batLines = @("@echo off", "call `"$vcvars`" $arch >nul 2>&1")
+    foreach ($ixx in $ixxFiles) {
+        $ixxName = [System.IO.Path]::GetFileNameWithoutExtension($ixx)
+        $depJson = Join-Path $scanDir "$ixxName.dep.json"
+        $batLines += "cl $baseFlags /scanDependencies `"$depJson`" /c `"$ixx`" >nul 2>&1"
+        $batLines += "if errorlevel 1 exit /b 1"
+    }
+    $batLines -join "`r`n" | Set-Content $scanBat -Encoding ASCII
+    cmd.exe /c "`"$scanBat`"" 2>$null >$null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[错误] 依赖扫描失败" -ForegroundColor Red
+        Remove-Item $scanDir -Recurse -Force -ErrorAction SilentlyContinue
+        exit 1
+    }
+
     $modNameToFile = @{}
     $modFileToRequires = @{}
     $usesImportStd = $false
@@ -391,9 +408,7 @@ if ($ixxFiles.Count -gt 0) {
     foreach ($ixx in $ixxFiles) {
         $ixxName = [System.IO.Path]::GetFileNameWithoutExtension($ixx)
         $depJson = Join-Path $scanDir "$ixxName.dep.json"
-        $scanCmd = "call `"$vcvars`" $arch >nul 2>&1 && cl $baseFlags /scanDependencies `"$depJson`" /c `"$ixx`""
-        cmd.exe /c $scanCmd 2>$null >$null
-        if ($LASTEXITCODE -ne 0 -or -not (Test-Path $depJson)) {
+        if (-not (Test-Path $depJson)) {
             Write-Host "[错误] 依赖扫描失败: $([System.IO.Path]::GetFileName($ixx))" -ForegroundColor Red
             Remove-Item $scanDir -Recurse -Force -ErrorAction SilentlyContinue
             exit 1
