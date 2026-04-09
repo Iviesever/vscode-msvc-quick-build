@@ -319,12 +319,20 @@ if (-not (Test-Path $vcvars)) {
     exit 1
 }
 
-$baseFlags = '/nologo /W3 /utf-8 /EHsc'
+$warnLevel = '/W3'
+if ($cfg -and $cfg.flags) {
+    foreach ($flag in $cfg.flags) {
+        if ($flag -match '^/W\d|^/Wall') { $warnLevel = $flag }
+    }
+}
+$baseFlags = "/nologo $warnLevel /utf-8 /EHsc"
 if ($cfg -and $cfg.defines) {
     foreach ($def in $cfg.defines) { $baseFlags += " /D$def" }
 }
 if ($cfg -and $cfg.flags) {
-    foreach ($flag in $cfg.flags) { $baseFlags += " $flag" }
+    foreach ($flag in $cfg.flags) {
+        if ($flag -notmatch '^/W\d|^/Wall') { $baseFlags += " $flag" }
+    }
 }
 if ($hasCpp -and $std) {
     $baseFlags += " /std:c++$std"
