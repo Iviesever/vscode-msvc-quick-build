@@ -154,7 +154,7 @@ if ($smart -and $files.Count -gt 0) {
             }
         }
 
-        foreach ($m in [regex]::Matches($content, '(?:export\s+)?import\s+(:[\w.]+|[\w.:]+)\s*;')) {
+        foreach ($m in [regex]::Matches($content, '(?:export\s+)?import\s*(:[\w.]+|[\w.:]+)\s*;')) {
             $modName = $m.Groups[1].Value
             if ($modName -eq 'std' -or $modName -eq 'std.compat') { continue }
             if ($modName.StartsWith(':')) {
