@@ -106,9 +106,9 @@ build solver.c -run -a "input.txt 42"
 
 ---
 
-## 一键编译运行（F5 / F6）
+## 一键编译运行（F5）
 
-不想每次手打命令？可以配置 VS Code 快捷键，按 F5 / F6 自动编译运行当前文件。
+不想每次手打命令？可以配置 VS Code 快捷键，按 F5 自动智能追踪依赖并编译运行。
 
 打开 VS Code 键盘快捷方式配置：`Ctrl + Shift + P` → 输入 `Open Keyboard Shortcuts (JSON)`，在 `[]` 中加入：
 
@@ -122,23 +122,7 @@ build solver.c -run -a "input.txt 42"
             {
                 "command": "workbench.action.terminal.sendSequence",
                 "args": {
-                    "text": "cd \"${fileDirname}\" ; build * -std latest -run\u000D"
-                }
-            }
-        ]
-    },
-    "when": "resourceLangId == 'cpp' || resourceLangId == 'c'"
-},
-{
-    "key": "f6",
-    "command": "runCommands",
-    "args": {
-        "commands": [
-            "workbench.action.terminal.focus",
-            {
-                "command": "workbench.action.terminal.sendSequence",
-                "args": {
-                    "text": "cd \"${fileDirname}\" ; build \"${fileBasename}\" -std latest -run\u000D"
+                    "text": "cd \"${fileDirname}\" ; build \"${fileBasename}\" -smart -std latest -run\u000D"
                 }
             }
         ]
@@ -147,12 +131,11 @@ build solver.c -run -a "input.txt 42"
 }
 ```
 
-| 快捷键 | 行为 |
-|--------|------|
-| `F5` | 编译当前文件所在目录的**所有源文件**并运行 |
-| `F6` | 只编译**当前打开的单个文件**并运行 |
-
-> 终端会自动弹出，自动 `cd` 到文件所在目录，无需手动操作。
+效果：
+- 终端自动弹出并 `cd` 到文件所在目录
+- 通过 `-smart` 自动追踪当前文件的 `#include` 和 `import` 依赖
+- 只编译相关文件，不会拖入同目录下无关的源文件
+- 代码未修改时自动跳过编译，直接运行
 
 ## 参数一览
 
@@ -164,6 +147,7 @@ build solver.c -run -a "input.txt 42"
 | `-std` | | `string` | C++ 标准：`14` / `17` / `20` / `23` / `latest` |
 | `-ProgramArgs` | `-a` | `string` | 运行时传给程序的命令行参数 |
 | `-x86` | | `switch` | 编译为 32 位（默认 64 位） |
+| `-smart` | | `switch` | 智能模式：自动追踪关联文件 |
 | `-I` | | `string[]` | 额外的头文件搜索路径（可多个） |
 | `-L` | | `string[]` | 额外的库文件搜索路径（可多个） |
 | `-libs` | | `string[]` | 要链接的库（不含 `.lib`，可多个） |
@@ -237,7 +221,51 @@ build processor.c -run -a "input.txt output.txt"
 build legacy.c -x86 -run
 ```
 
-### 8. 第三方库
+### 8. 智能追踪（`-smart`）
+
+同一目录下有多个互不相关的源文件时，`-smart` 只编译当前文件及其依赖：
+
+```
+project/
+├── homework1.cpp    # 独立文件
+├── homework2.cpp    # 独立文件
+├── main.cpp         # #include "lib.h"
+├── lib.h
+└── lib.cpp
+```
+
+```powershell
+# 焦点在 homework1.cpp → 只编译 homework1.cpp
+build homework1.cpp -smart -run
+
+# 焦点在 main.cpp → 自动发现 lib.cpp，一起编译
+build main.cpp -smart -run
+
+# 焦点在 lib.cpp → 反向追踪，也能找到 main.cpp
+build lib.cpp -smart -run
+```
+
+> `-smart` 通过分析 `#include "..."` 和 `import` 语句建立双向依赖图，
+> 使用 BFS 找出当前文件的完整关联集合。注释中的 include/import 会被正确忽略。
+
+### 9. 增量构建
+
+代码未修改时，脚本自动跳过编译，直接运行已有的 `.exe`：
+
+```
+[跳过] 代码未修改
+
+[运行] main.exe
+========================================
+Hello, World!
+========================================
+[结束] 退出码: 0
+```
+
+> 判断依据：比较 `.exe` 和所有源文件/头文件的修改时间。
+> 任何一个文件被修改过，就会触发重新编译。
+
+### 10. 第三方库
 
 ```powershell
 build main.cpp -I D:\libs\SDL2\include -L D:\libs\SDL2\lib -libs SDL2,SDL2main -run

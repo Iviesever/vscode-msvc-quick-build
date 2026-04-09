@@ -15,6 +15,8 @@ param(
 
     [switch]$x86,
 
+    [switch]$smart,
+
     [string[]]$I,
 
     [string[]]$L,
@@ -39,6 +41,7 @@ if ($help -or -not $Sources) {
     Write-Host '    -std <版本>     C++ 标准：14 / 17 / 20 / 23 / latest'
     Write-Host '    -a <参数>       传递给程序的命令行参数'
     Write-Host '    -x86            编译为 32 位（默认 64 位）'
+    Write-Host '    -smart          智能模式：自动追踪 #include / import 关联文件'
     Write-Host '    -I <路径...>    额外的头文件搜索路径（可多个）'
     Write-Host '    -L <路径...>    额外的库文件搜索路径（可多个）'
     Write-Host '    -libs <库名...>   要链接的库（不含 .lib，可多个）'
@@ -50,6 +53,7 @@ if ($help -or -not $Sources) {
     Write-Host '    build main.cpp mod.ixx -o app -std latest -run    C++ Modules'
     Write-Host '    build solver.c -run -a "input.txt 42"             传参运行'
     Write-Host '    build main.cpp -I D:\libs\SDL2\include -L D:\libs\SDL2\lib -libs SDL2,SDL2main -run'
+    Write-Host '    build main.cpp -smart -std latest -run                    智能追踪依赖'
     Write-Host ''
     Write-Host '  支持的文件类型：' -ForegroundColor DarkCyan
     Write-Host '    .c              C 源文件'
@@ -60,8 +64,10 @@ if ($help -or -not $Sources) {
     Write-Host '    · 自动检测并初始化 MSVC 编译环境（无需手动调用 vcvarsall.bat）'
     Write-Host '    · 支持 import std; 和 import std.compat;（首次自动编译，后续使用缓存）'
     Write-Host '    · 多 .ixx 模块自动分析依赖、拓扑排序，无需手动排列顺序'
+    Write-Host '    · -smart 智能追踪：自动通过 #include 和 import 发现关联文件'
     Write-Host '    · 支持 -I -L -libs 指定第三方库的路径和链接'
     Write-Host '    · 通配符自动过滤，只编译源文件，忽略 .h .hpp .txt 等'
+    Write-Host '    · 增量构建：代码未修改时跳过编译，直接运行'
     Write-Host '    · 编译产物自动清理（.obj .ifc）'
     Write-Host ''
     Write-Host '  详细文档：' -NoNewline -ForegroundColor DarkCyan
@@ -76,7 +82,8 @@ foreach ($src in $Sources) {
     $resolved = @(Resolve-Path $src -ErrorAction SilentlyContinue)
     if ($resolved.Count -gt 0) {
         foreach ($r in $resolved) {
-            if ($r.Path -match '\.(c|cpp|cxx|cc|ixx)$') {
+            $extRe = if ($smart) { '\.(c|cpp|cxx|cc|ixx|h|hpp)$' } else { '\.(c|cpp|cxx|cc|ixx)$' }
+            if ($r.Path -match $extRe) {
                 $files += $r.Path
             }
         }
@@ -92,6 +99,103 @@ if ($files.Count -eq 0) {
     exit 1
 }
 
+if ($smart -and $files.Count -gt 0) {
+    $focusedFile = $files[0]
+    $dir = [System.IO.Path]::GetDirectoryName($focusedFile)
+
+    $allCandidates = @{}
+    $dirItems = Get-ChildItem $dir -File | Where-Object { $_.Extension -match '^\.(?:c|cpp|cxx|cc|ixx|h|hpp)$' }
+    foreach ($f in $dirItems) {
+        $raw = Get-Content $f.FullName -Raw -ErrorAction SilentlyContinue
+        if (-not $raw) { $raw = '' }
+        $stripped = [regex]::Replace($raw, '/\*[\s\S]*?\*/', '')
+        $stripped = [regex]::Replace($stripped, '//[^\n]*', '')
+        $allCandidates[$f.FullName] = $stripped
+    }
+
+    $modProviders = @{}
+    foreach ($path in $allCandidates.Keys) {
+        if ($path -match '\.ixx$') {
+            $c = $allCandidates[$path]
+            if ($c -match 'export\s+module\s+([\w.:]+)\s*;') {
+                $modProviders[$Matches[1]] = $path
+            }
+        }
+    }
+
+    $depGraph = @{}
+    foreach ($path in $allCandidates.Keys) {
+        $depGraph[$path] = @()
+    }
+
+    foreach ($path in $allCandidates.Keys) {
+        $content = $allCandidates[$path]
+
+        foreach ($m in [regex]::Matches($content, '#include\s+"([^"]+)"')) {
+            $headerName = $m.Groups[1].Value
+            $headerPath = [System.IO.Path]::GetFullPath((Join-Path $dir $headerName))
+            if ($allCandidates.ContainsKey($headerPath)) {
+                $depGraph[$path] += $headerPath
+                $depGraph[$headerPath] += $path
+
+                $hdrBase = [System.IO.Path]::GetFileNameWithoutExtension($headerName)
+                foreach ($ext in @('.cpp', '.c', '.cxx', '.cc')) {
+                    $implPath = [System.IO.Path]::GetFullPath((Join-Path $dir "$hdrBase$ext"))
+                    if ($allCandidates.ContainsKey($implPath)) {
+                        $depGraph[$headerPath] += $implPath
+                        $depGraph[$implPath] += $headerPath
+                    }
+                }
+            }
+        }
+
+        foreach ($m in [regex]::Matches($content, '(?:export\s+)?import\s+([\w.:]+)\s*;')) {
+            $modName = $m.Groups[1].Value
+            if ($modName -eq 'std' -or $modName -eq 'std.compat') { continue }
+            if ($modProviders.ContainsKey($modName)) {
+                $ixxPath = $modProviders[$modName]
+                $depGraph[$path] += $ixxPath
+                $depGraph[$ixxPath] += $path
+            }
+        }
+    }
+
+    $visited = @{}
+    $bfsQueue = [System.Collections.Queue]::new()
+    $bfsQueue.Enqueue($focusedFile)
+    $visited[$focusedFile] = $true
+
+    while ($bfsQueue.Count -gt 0) {
+        $current = $bfsQueue.Dequeue()
+        if ($depGraph.ContainsKey($current)) {
+            foreach ($neighbor in $depGraph[$current]) {
+                if (-not $visited.ContainsKey($neighbor)) {
+                    $visited[$neighbor] = $true
+                    $bfsQueue.Enqueue($neighbor)
+                }
+            }
+        }
+    }
+
+    $smartAllFiles = @($visited.Keys)
+
+    $files = @($visited.Keys | Where-Object { $_ -match '\.(c|cpp|cxx|cc|ixx)$' } | Sort-Object)
+
+    if ($files.Count -eq 0) {
+        Write-Host '[错误] 未发现可编译的源文件' -ForegroundColor Red
+        exit 1
+    }
+
+    if ($files.Count -gt 1) {
+        $discoveredNames = ($files | ForEach-Object { [System.IO.Path]::GetFileName($_) }) -join ', '
+        Write-Host "[智能] 关联: $discoveredNames" -ForegroundColor DarkGray
+    }
+
+    if (-not $o) {
+        $o = [System.IO.Path]::GetFileNameWithoutExtension($focusedFile)
+    }
+}
+
 $ixxFiles = @($files | Where-Object { $_ -match '\.ixx$' })
 $cppFiles = @($files | Where-Object { $_ -match '\.(cpp|cxx|cc|c)$' })
 
@@ -105,6 +209,40 @@ if (-not $o) {
     }
 }
 $exe = Join-Path $PWD "$o.exe"
+
+# 增量构建：代码未修改时跳过编译
+if (Test-Path $exe) {
+    $exeTime = (Get-Item $exe).LastWriteTime
+    $checkFiles = if ($smart -and $smartAllFiles) { $smartAllFiles } else { $files }
+    $needsBuild = $false
+    foreach ($cf in $checkFiles) {
+        if (Test-Path $cf) {
+            if ((Get-Item $cf).LastWriteTime -gt $exeTime) {
+                $needsBuild = $true
+                break
+            }
+        }
+    }
+    if (-not $needsBuild) {
+        Write-Host ''
+        Write-Host "[跳过] 代码未修改" -ForegroundColor DarkGray
+        if ($run) {
+            Write-Host ''
+            Write-Host "[运行] $o.exe $ProgramArgs" -ForegroundColor Yellow
+            Write-Host ('=' * 40) -ForegroundColor DarkGray
+            if ($ProgramArgs) {
+                & $exe ($ProgramArgs -split ' ')
+            }
+            else {
+                & $exe
+            }
+            $code = $LASTEXITCODE
+            Write-Host ('=' * 40) -ForegroundColor DarkGray
+            Write-Host "[结束] 退出码: $code" -ForegroundColor DarkGray
+        }
+        exit 0
+    }
+}
 
 $hasCpp = ($cppFiles | Where-Object { $_ -match '\.(cpp|cxx|cc)$' }) -or ($ixxFiles.Count -gt 0)
 
