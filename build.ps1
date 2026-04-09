@@ -630,17 +630,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "[成功] $o.exe" -ForegroundColor Green
 
-foreach ($f in $files) {
-    $baseName = [System.IO.Path]::GetFileNameWithoutExtension($f)
-    $objPath = Join-Path $PWD "$baseName.obj"
-    $ifcPath = Join-Path $PWD "$baseName.ifc"
-    if (Test-Path $objPath) { Remove-Item $objPath }
-    if (Test-Path $ifcPath) { Remove-Item $ifcPath }
-}
-foreach ($stdFile in @('std.obj', 'std.ifc', 'std.compat.obj', 'std.compat.ifc')) {
-    $p = Join-Path $PWD $stdFile
-    if (Test-Path $p) { Remove-Item $p }
-}
+Remove-Item (Join-Path $PWD '*.obj'), (Join-Path $PWD '*.ifc') -Force -ErrorAction SilentlyContinue
 
 if ($run) {
     Write-Host ''
