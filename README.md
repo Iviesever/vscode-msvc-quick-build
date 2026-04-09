@@ -59,8 +59,8 @@ VS Code 默认使用的可能是 Windows PowerShell 5.1（`powershell.exe`），
 4. 在 **Terminal › Integrated › Default Profile: Windows** 下拉菜单中选择 **PowerShell**（不是 "Windows PowerShell"）
 
 > 下拉菜单中有两个选项容易混淆：
-> - **Windows PowerShell** → 这是 5.1，❌ 不要选
-> - **PowerShell** → 这是 7.x，✅ 选这个
+> - **Windows PowerShell** → 这是 5.1，不要选
+> - **PowerShell** → 这是 7.x，选这个
 
 ---
 
@@ -88,7 +88,7 @@ Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\PowerShell\Microso
 
 ---
 
-## 快速上手
+## 快速开始
 
 ```powershell
 # 编译并运行
