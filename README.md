@@ -72,6 +72,7 @@ VS Code 默认使用的可能是 Windows PowerShell 5.1（`powershell.exe`），
 |------|--------|------|
 | `build.ps1` | `C:\Users\<用户名>\bin\build.ps1` | 编译脚本本体 |
 | `Microsoft.PowerShell_profile.ps1` | `C:\Users\<用户名>\Documents\PowerShell\Microsoft.PowerShell_profile.ps1` | PS7 Profile，注册 `build` 命令 |
+| | `C:\Users\<用户名>\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1` | PS5 Profile，注册 `build` 命令（可选） |
 
 可以手动复制，也可以跑以下命令一键部署：
 
@@ -79,7 +80,14 @@ VS Code 默认使用的可能是 Windows PowerShell 5.1（`powershell.exe`），
 # 在本项目目录中执行
 New-Item "$HOME\bin" -ItemType Directory -Force | Out-Null
 Copy-Item "build.ps1" "$HOME\bin\build.ps1" -Force
+
+# 配置 PowerShell 7 (pwsh) 的环境变量
+New-Item "$HOME\Documents\PowerShell" -ItemType Directory -Force | Out-Null
 Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1" -Force
+
+# 配置 普通 Windows PowerShell 5.1 的环境变量（可选，兼容老终端）
+New-Item "$HOME\Documents\WindowsPowerShell" -ItemType Directory -Force | Out-Null
+Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1" -Force
 ```
 
 部署完成后，**重启 VS Code 终端**（或新开一个 pwsh 终端），输入 `build` 看到用法提示就成功了。
