@@ -114,11 +114,14 @@ if ($smart -and $files.Count -gt 0) {
     }
 
     $modProviders = @{}
+    $fileModule = @{}
     foreach ($path in $allCandidates.Keys) {
         if ($path -match '\.ixx$') {
             $c = $allCandidates[$path]
             if ($c -match 'export\s+module\s+([\w.:]+)\s*;') {
-                $modProviders[$Matches[1]] = $path
+                $fullModName = $Matches[1]
+                $modProviders[$fullModName] = $path
+                $fileModule[$path] = ($fullModName -split ':')[0]
             }
         }
     }
@@ -151,9 +154,13 @@ if ($smart -and $files.Count -gt 0) {
             }
         }
 
-        foreach ($m in [regex]::Matches($content, '(?:export\s+)?import\s+([\w.:]+)\s*;')) {
+        foreach ($m in [regex]::Matches($content, '(?:export\s+)?import\s+(:[\w.]+|[\w.:]+)\s*;')) {
             $modName = $m.Groups[1].Value
             if ($modName -eq 'std' -or $modName -eq 'std.compat') { continue }
+            if ($modName.StartsWith(':')) {
+                $parentMod = $fileModule[$path]
+                if ($parentMod) { $modName = "$parentMod$modName" }
+            }
             if ($modProviders.ContainsKey($modName)) {
                 $ixxPath = $modProviders[$modName]
                 $depGraph[$path] += $ixxPath
@@ -181,7 +188,14 @@ if ($smart -and $files.Count -gt 0) {
 
     $smartAllFiles = @($visited.Keys)
 
-    $files = @($visited.Keys | Where-Object { $_ -match '\.(c|cpp|cxx|cc|ixx)$' } | Sort-Object)
+    $files = @($visited.Keys | Where-Object {
+        $_ -match '\.(c|cpp|cxx|cc|ixx)$'
+    } | Where-Object {
+        if ($_ -eq $focusedFile) { return $true }
+        if ($_ -match '\.ixx$') { return $true }
+        $fc = $allCandidates[$_]
+        return -not ($fc -match '\bmain\s*\(')
+    } | Sort-Object)
 
     if ($files.Count -eq 0) {
         Write-Host '[错误] 未发现可编译的源文件' -ForegroundColor Red
