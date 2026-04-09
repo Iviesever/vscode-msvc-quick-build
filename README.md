@@ -106,6 +106,54 @@ build solver.c -run -a "input.txt 42"
 
 ---
 
+## 一键编译运行（F5 / F6）
+
+不想每次手打命令？可以配置 VS Code 快捷键，按 F5 / F6 自动编译运行当前文件。
+
+打开 VS Code 键盘快捷方式配置：`Ctrl + Shift + P` → 输入 `Open Keyboard Shortcuts (JSON)`，在 `[]` 中加入：
+
+```json
+{
+    "key": "f5",
+    "command": "runCommands",
+    "args": {
+        "commands": [
+            "workbench.action.terminal.focus",
+            {
+                "command": "workbench.action.terminal.sendSequence",
+                "args": {
+                    "text": "cd \"${fileDirname}\" ; build * -std latest -run\u000D"
+                }
+            }
+        ]
+    },
+    "when": "resourceLangId == 'cpp' || resourceLangId == 'c'"
+},
+{
+    "key": "f6",
+    "command": "runCommands",
+    "args": {
+        "commands": [
+            "workbench.action.terminal.focus",
+            {
+                "command": "workbench.action.terminal.sendSequence",
+                "args": {
+                    "text": "cd \"${fileDirname}\" ; build \"${fileBasename}\" -std latest -run\u000D"
+                }
+            }
+        ]
+    },
+    "when": "resourceLangId == 'cpp' || resourceLangId == 'c'"
+}
+```
+
+| 快捷键 | 行为 |
+|--------|------|
+| `F5` | 编译当前文件所在目录的**所有源文件**并运行 |
+| `F6` | 只编译**当前打开的单个文件**并运行 |
+
+> 终端会自动弹出，自动 `cd` 到文件所在目录，无需手动操作。
+
 ## 参数一览
 
 | 参数 | 别名 | 类型 | 说明 |
@@ -139,7 +187,7 @@ main.c
 ========================================
 Hello, World!
 ========================================
-[done] exit code: 0
+[结束] 退出码: 0
 ```
 
 ### 2. C++ + 指定标准

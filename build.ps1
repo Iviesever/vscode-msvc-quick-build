@@ -76,7 +76,7 @@ foreach ($src in $Sources) {
     $resolved = @(Resolve-Path $src -ErrorAction SilentlyContinue)
     if ($resolved.Count -gt 0) {
         foreach ($r in $resolved) {
-            if ($r.Path -match '\.(c|cpp|cxx|cc|ixx|h|hpp)$') {
+            if ($r.Path -match '\.(c|cpp|cxx|cc|ixx)$') {
                 $files += $r.Path
             }
         }
@@ -93,7 +93,7 @@ if ($files.Count -eq 0) {
 }
 
 $ixxFiles = @($files | Where-Object { $_ -match '\.ixx$' })
-$cppFiles = @($files | Where-Object { $_ -match '\.(cpp|cxx|cc|c|h|hpp)$' })
+$cppFiles = @($files | Where-Object { $_ -match '\.(cpp|cxx|cc|c)$' })
 
 if (-not $o) {
     $firstCpp = $cppFiles | Select-Object -First 1
@@ -106,7 +106,7 @@ if (-not $o) {
 }
 $exe = Join-Path $PWD "$o.exe"
 
-$hasCpp = ($cppFiles | Where-Object { $_ -match '\.(cpp|cxx|cc|hpp)$' }) -or ($ixxFiles.Count -gt 0)
+$hasCpp = ($cppFiles | Where-Object { $_ -match '\.(cpp|cxx|cc)$' }) -or ($ixxFiles.Count -gt 0)
 
 $pf86 = [System.Environment]::GetFolderPath('ProgramFilesX86')
 $vswhere = Join-Path $pf86 'Microsoft Visual Studio\Installer\vswhere.exe'
