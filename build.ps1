@@ -66,6 +66,7 @@ if ($help -or -not $Sources) {
     Write-Host '    · 多 .ixx 模块自动分析依赖、拓扑排序，无需手动排列顺序'
     Write-Host '    · -smart 智能追踪：自动通过 #include 和 import 发现关联文件'
     Write-Host '    · 支持 -I -L -libs 指定第三方库的路径和链接'
+    Write-Host '    · msvc_list.json 项目配置：定义宏、链接库、编译选项（可选）'
     Write-Host '    · 通配符自动过滤，只编译源文件，忽略 .h .hpp .txt 等'
     Write-Host '    · 增量构建：代码未修改时跳过编译，直接运行'
     Write-Host '    · 编译产物自动清理（.obj .ifc）'
@@ -82,7 +83,7 @@ foreach ($src in $Sources) {
     $resolved = @(Resolve-Path $src -ErrorAction SilentlyContinue)
     if ($resolved.Count -gt 0) {
         foreach ($r in $resolved) {
-            $extRe = if ($smart) { '\.(c|cpp|cxx|cc|ixx|h|hpp)$' } else { '\.(c|cpp|cxx|cc|ixx)$' }
+            if ($smart) { $extRe = '\.(c|cpp|cxx|cc|ixx|h|hpp)$' } else { $extRe = '\.(c|cpp|cxx|cc|ixx)$' }
             if ($r.Path -match $extRe) {
                 $files += $r.Path
             }
@@ -234,7 +235,7 @@ $exe = Join-Path $PWD "$o.exe"
 # 增量构建：代码未修改时跳过编译
 if (Test-Path $exe) {
     $exeTime = (Get-Item $exe).LastWriteTime
-    $checkFiles = if ($smart -and $smartAllFiles) { $smartAllFiles } else { $files }
+    if ($smart -and $smartAllFiles) { $checkFiles = $smartAllFiles } else { $checkFiles = $files }
     $needsBuild = $false
     foreach ($cf in $checkFiles) {
         if (Test-Path $cf) {
@@ -264,6 +265,25 @@ if (Test-Path $exe) {
         exit 0
     }
 }
+
+# msvc_list.json 项目配置（向上查找）
+$cfg = $null
+$cfgFoundDir = $null
+$searchDir = $PWD.Path
+for ($i = 0; $i -lt 5; $i++) {
+    $cfgPath = Join-Path $searchDir 'msvc_list.json'
+    if (Test-Path $cfgPath) {
+        $cfg = Get-Content $cfgPath -Raw | ConvertFrom-Json
+        $cfgFoundDir = $searchDir
+        Write-Host "[配置] msvc_list.json" -ForegroundColor DarkGray
+        break
+    }
+    $parent = [System.IO.Path]::GetDirectoryName($searchDir)
+    if (-not $parent -or $parent -eq $searchDir) { break }
+    $searchDir = $parent
+}
+
+if ($cfg -and -not $std -and $cfg.std) { $std = $cfg.std }
 
 $hasCpp = ($cppFiles | Where-Object { $_ -match '\.(cpp|cxx|cc)$' }) -or ($ixxFiles.Count -gt 0)
 
@@ -300,6 +320,12 @@ if (-not (Test-Path $vcvars)) {
 }
 
 $baseFlags = '/nologo /W3 /utf-8 /EHsc'
+if ($cfg -and $cfg.defines) {
+    foreach ($def in $cfg.defines) { $baseFlags += " /D$def" }
+}
+if ($cfg -and $cfg.flags) {
+    foreach ($flag in $cfg.flags) { $baseFlags += " $flag" }
+}
 if ($hasCpp -and $std) {
     $baseFlags += " /std:c++$std"
 }
@@ -309,17 +335,35 @@ elseif ($ixxFiles.Count -gt 0 -and -not $std) {
 foreach ($inc in $I) {
     $baseFlags += " /I`"$inc`""
 }
+if ($cfg -and $cfg.include) {
+    foreach ($inc in $cfg.include) {
+        if ([System.IO.Path]::IsPathRooted($inc)) { $resolved = $inc } else { $resolved = Join-Path $cfgFoundDir $inc }
+        $baseFlags += " /I`"$resolved`""
+    }
+}
 
 $linkFlags = ''
-foreach ($libDir in $L) {
-    $linkFlags += " /link /LIBPATH:`"$libDir`""
+$allLibPaths = @()
+if ($L) { $allLibPaths += $L }
+if ($cfg -and $cfg.libpath) {
+    foreach ($lp in $cfg.libpath) {
+        if ([System.IO.Path]::IsPathRooted($lp)) { $resolved = $lp } else { $resolved = Join-Path $cfgFoundDir $lp }
+        $allLibPaths += $resolved
+    }
+}
+if ($allLibPaths.Count -gt 0) {
+    $linkFlags = ' /link'
+    foreach ($lp in $allLibPaths) { $linkFlags += " /LIBPATH:`"$lp`"" }
 }
 $libFiles = ''
-foreach ($lib in $libs) {
+$allLibs = @()
+if ($libs) { $allLibs += $libs }
+if ($cfg -and $cfg.libs) { $allLibs += $cfg.libs }
+foreach ($lib in $allLibs) {
     $libFiles += " `"$lib.lib`""
 }
 
-$arch = if ($x86) { 'x86' } else { 'x64' }
+if ($x86) { $arch = 'x86' } else { $arch = 'x64' }
 
 Write-Host ''
 $allFileNames = ($files | ForEach-Object { [System.IO.Path]::GetFileName($_) }) -join ', '
