@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Parameter(Position = 0, ValueFromRemainingArguments)]
     [string[]]$Sources,
 
@@ -23,7 +23,7 @@ param(
 
     [string[]]$libs,
 
-    # ── msvc_list.json 1:1 对应参数 ──
+    # 鈹€鈹€ msvc_list.json 1:1 瀵瑰簲鍙傛暟 鈹€鈹€
     [ValidateSet('debug', 'release')]
     [string]$config,
 
@@ -72,55 +72,55 @@ param(
 if ($help -or -not $Sources) {
     Write-Host ''
     Write-Host 'build' -NoNewline -ForegroundColor Cyan
-    Write-Host ' — MSVC 快速编译工具' -ForegroundColor DarkGray
-    Write-Host '  用法：' -ForegroundColor DarkCyan
-    Write-Host '    build <源文件...> [选项]'
+    Write-Host ' 鈥?MSVC 蹇€熺紪璇戝伐鍏? -ForegroundColor DarkGray
+    Write-Host '  鐢ㄦ硶锛? -ForegroundColor DarkCyan
+    Write-Host '    build <婧愭枃浠?..> [閫夐」]'
     Write-Host ''
-    Write-Host '  基础选项：' -ForegroundColor DarkCyan
-    Write-Host '    -o <名称>       指定输出文件名（不含 .exe）'
-    Write-Host '    -run            编译成功后自动运行'
-    Write-Host '    -std <版本>     C++ 标准：14 / 17 / 20 / 23 / latest'
-    Write-Host '    -a <参数>       传递给程序的命令行参数'
-    Write-Host '    -x86            编译为 32 位（默认 64 位）'
-    Write-Host '    -smart          智能模式：自动通过 #include 和 import 追踪关联的源文件'
+    Write-Host '  鍩虹閫夐」锛? -ForegroundColor DarkCyan
+    Write-Host '    -o <鍚嶇О>       鎸囧畾杈撳嚭鏂囦欢鍚嶏紙涓嶅惈 .exe锛?
+    Write-Host '    -run            缂栬瘧鎴愬姛鍚庤嚜鍔ㄨ繍琛?
+    Write-Host '    -std <鐗堟湰>     C++ 鏍囧噯锛?4 / 17 / 20 / 23 / latest'
+    Write-Host '    -a <鍙傛暟>       浼犻€掔粰绋嬪簭鐨勫懡浠よ鍙傛暟'
+    Write-Host '    -x86            缂栬瘧涓?32 浣嶏紙榛樿 64 浣嶏級'
+    Write-Host '    -smart          鏅鸿兘妯″紡锛氳嚜鍔ㄩ€氳繃 #include 鍜?import 杩借釜鍏宠仈鐨勬簮鏂囦欢'
     Write-Host ''
-    Write-Host '  路径与链接依赖：' -ForegroundColor DarkCyan
-    Write-Host '    -I <路径...>    额外的头文件包含路径 (可多个)'
-    Write-Host '    -L <路径...>    额外的库文件搜索路径 (可多个)'
-    Write-Host '    -libs <库名...>   要链接的库（不含 .lib，可多个）'
+    Write-Host '  璺緞涓庨摼鎺ヤ緷璧栵細' -ForegroundColor DarkCyan
+    Write-Host '    -I <璺緞...>    棰濆鐨勫ご鏂囦欢鍖呭惈璺緞 (鍙涓?'
+    Write-Host '    -L <璺緞...>    棰濆鐨勫簱鏂囦欢鎼滅储璺緞 (鍙涓?'
+    Write-Host '    -libs <搴撳悕...>   瑕侀摼鎺ョ殑搴擄紙涓嶅惈 .lib锛屽彲澶氫釜锛?
     Write-Host ''
-    Write-Host '  工业级工程配置 (与 msvc_list.json 的字段 1:1 对应，CLI 优先级最高)：' -ForegroundColor Magenta
-    Write-Host '    -config <preset>      使用官方配置预设：debug / release'
-    Write-Host '    -optimize <级别>      优化级别：off / size / speed / full'
-    Write-Host '    -runtime <动态静态>     运行库：dynamic (/MD) / static (/MT)'
-    Write-Host '    -warnings <级别>      警告：off / basic / default / high / all'
-    Write-Host '    -warn_as_error        视警告为错误 (/WX)'
-    Write-Host '    -debug_info <模式>    调试信息：off / pdb (/Zi) / edit (/ZI) / embedded (/Z7)'
-    Write-Host '    -exceptions <模式>    异常处理：sync (/EHsc) / async (/EHa) / none'
-    Write-Host '    -fp_model <模式>      浮点模型：precise / strict / fast'
-    Write-Host '    -charset <字符集>      自动宏定义：unicode (/DUNICODE) / mbcs (/D_MBCS)'
-    Write-Host '    -subsystem <子系统>     链接器子系统：console / windows'
-    Write-Host '    -rtc                  开启行时检查 (/RTC1)'
-    Write-Host '    -jmc                  开启 Just My Code 调试 (/JMC)'
-    Write-Host '    -security             开启缓冲区安全检查 (/GS /sdl)'
-    Write-Host '    -conformance          开启严格标准一致性检查 (/permissive- /Zc:...) '
-    Write-Host '    -ltcg                 开启全程序优化 (LTCG)'
-    Write-Host '    -incremental_link     启用增量链接 (/INCREMENTAL)'
-    Write-Host '    -defines <宏...>       定义预处理器宏 (可多个)'
-    Write-Host '    -flags <参数...>      追加原始编译器标志 (如 /wd4819)'
-    Write-Host '    -link_flags <参数...> 追加原始链接器标志 (如 /NODEFAULTLIB)'
+    Write-Host '  宸ヤ笟绾у伐绋嬮厤缃?(涓?msvc_list.json 鐨勫瓧娈?1:1 瀵瑰簲锛孋LI 浼樺厛绾ф渶楂?锛? -ForegroundColor Magenta
+    Write-Host '    -config <preset>      浣跨敤瀹樻柟閰嶇疆棰勮锛歞ebug / release'
+    Write-Host '    -optimize <绾у埆>      浼樺寲绾у埆锛歰ff / size / speed / full'
+    Write-Host '    -runtime <鍔ㄦ€侀潤鎬?     杩愯搴擄細dynamic (/MD) / static (/MT)'
+    Write-Host '    -warnings <绾у埆>      璀﹀憡锛歰ff / basic / default / high / all'
+    Write-Host '    -warn_as_error        瑙嗚鍛婁负閿欒 (/WX)'
+    Write-Host '    -debug_info <妯″紡>    璋冭瘯淇℃伅锛歰ff / pdb (/Zi) / edit (/ZI) / embedded (/Z7)'
+    Write-Host '    -exceptions <妯″紡>    寮傚父澶勭悊锛歴ync (/EHsc) / async (/EHa) / none'
+    Write-Host '    -fp_model <妯″紡>      娴偣妯″瀷锛歱recise / strict / fast'
+    Write-Host '    -charset <瀛楃闆?      鑷姩瀹忓畾涔夛細unicode (/DUNICODE) / mbcs (/D_MBCS)'
+    Write-Host '    -subsystem <瀛愮郴缁?     閾炬帴鍣ㄥ瓙绯荤粺锛歝onsole / windows'
+    Write-Host '    -rtc                  寮€鍚鏃舵鏌?(/RTC1)'
+    Write-Host '    -jmc                  寮€鍚?Just My Code 璋冭瘯 (/JMC)'
+    Write-Host '    -security             寮€鍚紦鍐插尯瀹夊叏妫€鏌?(/GS /sdl)'
+    Write-Host '    -conformance          寮€鍚弗鏍兼爣鍑嗕竴鑷存€ф鏌?(/permissive- /Zc:...) '
+    Write-Host '    -ltcg                 寮€鍚叏绋嬪簭浼樺寲 (LTCG)'
+    Write-Host '    -incremental_link     鍚敤澧為噺閾炬帴 (/INCREMENTAL)'
+    Write-Host '    -defines <瀹?..>       瀹氫箟棰勫鐞嗗櫒瀹?(鍙涓?'
+    Write-Host '    -flags <鍙傛暟...>      杩藉姞鍘熷缂栬瘧鍣ㄦ爣蹇?(濡?/wd4819)'
+    Write-Host '    -link_flags <鍙傛暟...> 杩藉姞鍘熷閾炬帴鍣ㄦ爣蹇?(濡?/NODEFAULTLIB)'
     Write-Host ''
-    Write-Host '  示例：' -ForegroundColor DarkCyan
+    Write-Host '  绀轰緥锛? -ForegroundColor DarkCyan
     Write-Host '    build main.cpp -run'
     Write-Host '    build *.cpp -o app -std 23 -config release -run'
     Write-Host '    build main.cpp -smart -config debug -warnings high -conformance -run'
     Write-Host ''
-    Write-Host '  支持文件：' -ForegroundColor DarkCyan
+    Write-Host '  鏀寔鏂囦欢锛? -ForegroundColor DarkCyan
     Write-Host '    .c (C), .cpp / .cxx / .cc (C++), .ixx (C++20 Modules)'
-    Write-Host "    (执行 'build' 时不带源文件，可屏蔽 .h/.txt 等无关文件自动提取源内容)"
+    Write-Host "    (鎵ц 'build' 鏃朵笉甯︽簮鏂囦欢锛屽彲灞忚斀 .h/.txt 绛夋棤鍏虫枃浠惰嚜鍔ㄦ彁鍙栨簮鍐呭)"
     Write-Host ''
-    Write-Host '  详细文档与项目配置指南：' -NoNewline -ForegroundColor DarkCyan
-    Write-Host ' 参阅项目目录下的 README.md (完全支持 msvc_list.json)' -ForegroundColor DarkGray
+    Write-Host '  璇︾粏鏂囨。涓庨」鐩厤缃寚鍗楋細' -NoNewline -ForegroundColor DarkCyan
+    Write-Host ' 鍙傞槄椤圭洰鐩綍涓嬬殑 README.md (瀹屽叏鏀寔 msvc_list.json)' -ForegroundColor DarkGray
     Write-Host ''
 
     exit 0
@@ -139,13 +139,13 @@ foreach ($src in $Sources) {
         }
     }
     else {
-        Write-Host "[错误] 文件不存在: $src" -ForegroundColor Red
+        Write-Host "[閿欒] 鏂囦欢涓嶅瓨鍦? $src" -ForegroundColor Red
         exit 1
     }
 }
 
 if ($files.Count -eq 0) {
-    Write-Host '[错误] 未指定源文件' -ForegroundColor Red
+    Write-Host '[閿欒] 鏈寚瀹氭簮鏂囦欢' -ForegroundColor Red
     exit 1
 }
 
@@ -245,7 +245,7 @@ if ($smart -and $files.Count -gt 0) {
         if ($_ -match '\.ixx$') { return $true }
         $fc = $allCandidates[$_]
         if ($fc -match '\bmain\s*\(') { return $false }
-        # exclude 模式过滤
+        # exclude 妯″紡杩囨护
         if ($cfg -and $cfg.exclude) {
             $fn = [System.IO.Path]::GetFileName($_)
             foreach ($pat in $cfg.exclude) {
@@ -256,17 +256,17 @@ if ($smart -and $files.Count -gt 0) {
     } | Sort-Object)
 
     if ($files.Count -eq 0) {
-        Write-Host '[错误] 未发现可编译的源文件' -ForegroundColor Red
+        Write-Host '[閿欒] 鏈彂鐜板彲缂栬瘧鐨勬簮鏂囦欢' -ForegroundColor Red
         exit 1
     }
 
     if ($files.Count -gt 1) {
         if ($files.Count -le 8) {
             $discoveredNames = ($files | ForEach-Object { [System.IO.Path]::GetFileName($_) }) -join ', '
-            Write-Host "[智能] 关联: $discoveredNames" -ForegroundColor DarkGray
+            Write-Host "[鏅鸿兘] 鍏宠仈: $discoveredNames" -ForegroundColor DarkGray
         } else {
             $first5 = ($files | Select-Object -First 5 | ForEach-Object { [System.IO.Path]::GetFileName($_) }) -join ', '
-            Write-Host "[智能] 关联: $first5, ... 共 $($files.Count) 个文件" -ForegroundColor DarkGray
+            Write-Host "[鏅鸿兘] 鍏宠仈: $first5, ... 鍏?$($files.Count) 涓枃浠? -ForegroundColor DarkGray
         }
     }
 
@@ -289,8 +289,7 @@ if (-not $o) {
 }
 
 $exe = Join-Path $PWD "$o.exe"
-# 增量构建：代码未修改时跳过编译
-if (Test-Path $exe) {
+# 澧為噺鏋勫缓锛氫唬鐮佹湭淇敼鏃惰烦杩囩紪璇?if (Test-Path $exe) {
     $exeTime = (Get-Item $exe).LastWriteTime
     if ($smart -and $smartAllFiles) { $checkFiles = $smartAllFiles } else { $checkFiles = $files }
     $needsBuild = $false
@@ -304,10 +303,10 @@ if (Test-Path $exe) {
     }
     if (-not $needsBuild) {
         Write-Host ''
-        Write-Host "[跳过] 代码未修改" -ForegroundColor DarkGray
+        Write-Host "[璺宠繃] 浠ｇ爜鏈慨鏀? -ForegroundColor DarkGray
         if ($run) {
             Write-Host ''
-            Write-Host "[运行] $o.exe $ProgramArgs" -ForegroundColor Yellow
+            Write-Host "[杩愯] $o.exe $ProgramArgs" -ForegroundColor Yellow
             Write-Host ('=' * 40) -ForegroundColor DarkGray
             if ($ProgramArgs) {
                 & $exe ($ProgramArgs -split ' ')
@@ -317,13 +316,13 @@ if (Test-Path $exe) {
             }
             $code = $LASTEXITCODE
             Write-Host ('=' * 40) -ForegroundColor DarkGray
-            Write-Host "[结束] 退出码: $code" -ForegroundColor DarkGray
+            Write-Host "[缁撴潫] 閫€鍑虹爜: $code" -ForegroundColor DarkGray
         }
         exit 0
     }
 }
 
-# msvc_list.json 项目配置（向上查找）
+# msvc_list.json 椤圭洰閰嶇疆锛堝悜涓婃煡鎵撅級
 $cfg = $null
 $cfgFoundDir = $null
 $searchDir = $PWD.Path
@@ -332,7 +331,7 @@ for ($lvl = 0; $lvl -lt 5; $lvl++) {
     if (Test-Path $cfgPath) {
         $cfg = Get-Content $cfgPath -Raw | ConvertFrom-Json
         $cfgFoundDir = $searchDir
-        Write-Host "[配置] msvc_list.json" -ForegroundColor DarkGray
+        Write-Host "[閰嶇疆] msvc_list.json" -ForegroundColor DarkGray
         break
     }
     $parent = [System.IO.Path]::GetDirectoryName($searchDir)
@@ -341,16 +340,15 @@ for ($lvl = 0; $lvl -lt 5; $lvl++) {
 }
 
 if ($cfg -and -not $std -and $cfg.std) { $std = $cfg.std }
-# output 优先级：命令行 -o > JSON output > 自动检测
-if ($cfg -and $cfg.output -and -not $PSBoundParameters.ContainsKey('o')) { $o = $cfg.output }
+# output 浼樺厛绾э細鍛戒护琛?-o > JSON output > 鑷姩妫€娴?if ($cfg -and $cfg.output -and -not $PSBoundParameters.ContainsKey('o')) { $o = $cfg.output }
 $exe = Join-Path $PWD "$o.exe"
 
 $hasCpp = ($cppFiles | Where-Object { $_ -match '\.(cpp|cxx|cc)$' }) -or ($ixxFiles.Count -gt 0)
 
-Write-Host "[环境] 配置便携版 MSVC 工具链内存环境..." -ForegroundColor Green
+Write-Host "[鐜] 閰嶇疆渚挎惡鐗?MSVC 宸ュ叿閾惧唴瀛樼幆澧?.." -ForegroundColor Green
 $portableBase = Join-Path $PSScriptRoot "portable_msvc"
 if (-not (Test-Path $portableBase)) {
-    Write-Host "[错误] 未找到 portable_msvc 文件夹。请先运行 export-msvc.ps1 生成便携构建包。" -ForegroundColor Red
+    Write-Host "[閿欒] 鏈壘鍒?portable_msvc 鏂囦欢澶广€傝鍏堣繍琛?export-msvc.ps1 鐢熸垚渚挎惡鏋勫缓鍖呫€? -ForegroundColor Red
     exit 1
 }
 
@@ -390,12 +388,9 @@ $sysLibs = @(
 )
 $env:LIB = ($sysLibs -join ";") + ";" + $env:LIB
 
-# ═══════════════════════════════════════════════════════════════
-# 编译/链接标志构建（config 预设 + 字段覆盖）
-# 基于 VS2026 v180 MSBuild 官方属性 (Microsoft.Cl.Common.props / Microsoft.Link.Common.props)
-# ═══════════════════════════════════════════════════════════════
-
-# config 预设定义（对齐 VS 项目模板，非 toolset 裸默认）
+# 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?# 缂栬瘧/閾炬帴鏍囧織鏋勫缓锛坈onfig 棰勮 + 瀛楁瑕嗙洊锛?# 鍩轰簬 VS2026 v180 MSBuild 瀹樻柟灞炴€?(Microsoft.Cl.Common.props / Microsoft.Link.Common.props)
+# 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+# config 棰勮瀹氫箟锛堝榻?VS 椤圭洰妯℃澘锛岄潪 toolset 瑁搁粯璁わ級
 $presets = @{
     debug = @{
         optimize = 'off';       runtime = 'dynamic';   warnings = 'default'
@@ -415,22 +410,21 @@ $presets = @{
     }
 }
 
-# 解析预设（CLI -config > JSON config）
-$preset = $null
+# 瑙ｆ瀽棰勮锛圕LI -config > JSON config锛?$preset = $null
 $cfgConfigSrc = if ($PSBoundParameters.ContainsKey('config')) { $config } elseif ($cfg -and $cfg.config) { $cfg.config } else { $null }
 if ($cfgConfigSrc) {
     if ($presets.ContainsKey($cfgConfigSrc)) {
         $preset = $presets[$cfgConfigSrc]
     } else {
-        Write-Host "[警告] 未知 config: $cfgConfigSrc，忽略" -ForegroundColor Yellow
+        Write-Host "[璀﹀憡] 鏈煡 config: $cfgConfigSrc锛屽拷鐣? -ForegroundColor Yellow
     }
 }
 
-# 辅助函数：CLI > JSON > 预设 > fallback
+# 杈呭姪鍑芥暟锛欳LI > JSON > 棰勮 > fallback
 function Get-CfgVal($field, $fallback) {
-    # CLI 参数最优先
+    # CLI 鍙傛暟鏈€浼樺厛
     if ($PSBoundParameters.ContainsKey($field)) { return $PSBoundParameters[$field] }
-    # JSON 字段
+    # JSON 瀛楁
     if ($cfg -and $null -ne (& { try { $cfg.$field } catch { $null } })) {
         return $cfg.$field
     }
@@ -438,8 +432,7 @@ function Get-CfgVal($field, $fallback) {
     return $fallback
 }
 
-# 解析各字段
-$cfgOptimize        = Get-CfgVal 'optimize'         $null
+# 瑙ｆ瀽鍚勫瓧娈?$cfgOptimize        = Get-CfgVal 'optimize'         $null
 $cfgRuntime         = Get-CfgVal 'runtime'           $null
 $cfgWarnings        = Get-CfgVal 'warnings'          'default'
 $cfgWarnAsError     = Get-CfgVal 'warn_as_error'     $false
@@ -452,11 +445,11 @@ $cfgConformance     = Get-CfgVal 'conformance'       $false
 $cfgFpModel         = Get-CfgVal 'fp_model'          $null
 $cfgLtcg            = Get-CfgVal 'ltcg'              $false
 $cfgIncrLink        = Get-CfgVal 'incremental_link'  $null
-# config 来源：CLI > JSON
+# config 鏉ユ簮锛欳LI > JSON
 $activeConfig = if ($PSBoundParameters.ContainsKey('config')) { $config } elseif ($cfg -and $cfg.config) { $cfg.config } else { $null }
 $isDebug = ($activeConfig -eq 'debug')
 
-# ── 编译标志 ──
+# 鈹€鈹€ 缂栬瘧鏍囧織 鈹€鈹€
 $baseFlags = '/nologo /utf-8'
 
 # warnings
@@ -515,10 +508,10 @@ if ($cfgConformance) { $baseFlags += ' /permissive- /Zc:__cplusplus /Zc:preproce
 # LTCG (compiler side)
 if ($cfgLtcg -and -not $isDebug) { $baseFlags += ' /GL /Gy' }
 
-# 固定标志（MSBuild 默认始终开启）
+# 鍥哄畾鏍囧織锛圡SBuild 榛樿濮嬬粓寮€鍚級
 $baseFlags += ' /Zc:forScope /Zc:wchar_t /FC /diagnostics:column'
 
-# config 自动 defines
+# config 鑷姩 defines
 if ($preset -and $preset.auto_defines) {
     foreach ($ad in $preset.auto_defines) { $baseFlags += " /D$ad" }
 }
@@ -530,23 +523,21 @@ if ($cfgCharset) {
     elseif ($cfgCharset -eq 'mbcs') { $baseFlags += ' /D_MBCS' }
 }
 
-# 用户 defines（JSON + CLI 合并）
-if ($cfg -and $cfg.defines) {
+# 鐢ㄦ埛 defines锛圝SON + CLI 鍚堝苟锛?if ($cfg -and $cfg.defines) {
     foreach ($def in $cfg.defines) { $baseFlags += " /D$def" }
 }
 if ($defines) {
     foreach ($def in $defines) { $baseFlags += " /D$def" }
 }
 
-# 原始 flags（JSON + CLI 合并）
-if ($cfg -and $cfg.flags) {
+# 鍘熷 flags锛圝SON + CLI 鍚堝苟锛?if ($cfg -and $cfg.flags) {
     foreach ($flag in $cfg.flags) { $baseFlags += " $flag" }
 }
 if ($PSBoundParameters.ContainsKey('flags') -and $flags) {
     foreach ($flag in $flags) { $baseFlags += " $flag" }
 }
 
-# C++ 标准
+# C++ 鏍囧噯
 if ($hasCpp -and $std) {
     $baseFlags += " /std:c++$std"
 }
@@ -554,7 +545,7 @@ elseif ($ixxFiles.Count -gt 0 -and -not $std) {
     $baseFlags += ' /std:c++latest'
 }
 
-# include 路径
+# include 璺緞
 foreach ($inc in $I) {
     $baseFlags += " /I`"$inc`""
 }
@@ -565,7 +556,7 @@ if ($cfg -and $cfg.include) {
     }
 }
 
-# ── 链接标志 ──
+# 鈹€鈹€ 閾炬帴鏍囧織 鈹€鈹€
 $linkFlags = ''
 $allLibPaths = @()
 if ($L) { $allLibPaths += $L }
@@ -576,8 +567,7 @@ if ($cfg -and $cfg.libpath) {
     }
 }
 
-# 判断是否需要 /link 段
-$cfgSubsystem = if ($PSBoundParameters.ContainsKey('subsystem')) { $subsystem } elseif ($cfg -and $cfg.subsystem) { $cfg.subsystem } else { $null }
+# 鍒ゆ柇鏄惁闇€瑕?/link 娈?$cfgSubsystem = if ($PSBoundParameters.ContainsKey('subsystem')) { $subsystem } elseif ($cfg -and $cfg.subsystem) { $cfg.subsystem } else { $null }
 $needLinkSection = ($allLibPaths.Count -gt 0) -or $cfgSubsystem -or $preset -or ($cfg -and $cfg.link_flags) -or ($PSBoundParameters.ContainsKey('link_flags') -and $link_flags)
 if ($needLinkSection) {
     $linkFlags = ' /link'
@@ -585,7 +575,7 @@ if ($needLinkSection) {
     if ($cfgSubsystem) {
         $linkFlags += " /SUBSYSTEM:$($cfgSubsystem.ToUpper())"
     }
-    # config 链接预设
+    # config 閾炬帴棰勮
     if ($preset) {
         $linkFlags += ' /DEBUG:FULL /DYNAMICBASE /NXCOMPAT'
         if ($cfgLtcg -and -not $isDebug) {
@@ -598,8 +588,7 @@ if ($needLinkSection) {
             $linkFlags += ' /INCREMENTAL:NO'
         }
     }
-    # 原始 link_flags（JSON + CLI 合并）
-    if ($cfg -and $cfg.link_flags) {
+    # 鍘熷 link_flags锛圝SON + CLI 鍚堝苟锛?    if ($cfg -and $cfg.link_flags) {
         foreach ($lf in $cfg.link_flags) { $linkFlags += " $lf" }
     }
     if ($PSBoundParameters.ContainsKey('link_flags') -and $link_flags) {
@@ -618,15 +607,15 @@ if ($x86) { $arch = 'x86' } else { $arch = 'x64' }
 
 Write-Host ''
 $allFileNames = ($files | ForEach-Object { [System.IO.Path]::GetFileName($_) }) -join ', '
-Write-Host "[编译] $allFileNames -> $o.exe" -ForegroundColor Cyan
+Write-Host "[缂栬瘧] $allFileNames -> $o.exe" -ForegroundColor Cyan
 
 if ($ixxFiles.Count -gt 0) {
-    Write-Host "[模块] 检测到 .ixx 模块，扫描依赖关系..." -ForegroundColor Magenta
+    Write-Host "[妯″潡] 妫€娴嬪埌 .ixx 妯″潡锛屾壂鎻忎緷璧栧叧绯?.." -ForegroundColor Magenta
 
     $scanDir = Join-Path $env:TEMP "msvc_build_scan_$$"
     New-Item $scanDir -ItemType Directory -Force | Out-Null
 
-    # 批量扫描：只调一次 vcvarsall，所有 .ixx 一起扫
+    # 鎵归噺鎵弿锛氬彧璋冧竴娆?vcvarsall锛屾墍鏈?.ixx 涓€璧锋壂
     $scanBat = Join-Path $scanDir '_scan_all.bat'
     $batLines = @("@echo off", "chcp 65001 >nul")
     foreach ($ixx in $ixxFiles) {
@@ -638,7 +627,7 @@ if ($ixxFiles.Count -gt 0) {
     $batLines -join "`r`n" | Set-Content $scanBat -Encoding utf8
     cmd.exe /c "`"$scanBat`"" 2>$null >$null
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "[错误] 依赖扫描失败" -ForegroundColor Red
+        Write-Host "[閿欒] 渚濊禆鎵弿澶辫触" -ForegroundColor Red
         Remove-Item $scanDir -Recurse -Force -ErrorAction SilentlyContinue
         exit 1
     }
@@ -652,7 +641,7 @@ if ($ixxFiles.Count -gt 0) {
         $ixxName = [System.IO.Path]::GetFileNameWithoutExtension($ixx)
         $depJson = Join-Path $scanDir "$ixxName.dep.json"
         if (-not (Test-Path $depJson)) {
-            Write-Host "[错误] 依赖扫描失败: $([System.IO.Path]::GetFileName($ixx))" -ForegroundColor Red
+            Write-Host "[閿欒] 渚濊禆鎵弿澶辫触: $([System.IO.Path]::GetFileName($ixx))" -ForegroundColor Red
             Remove-Item $scanDir -Recurse -Force -ErrorAction SilentlyContinue
             exit 1
         }
@@ -687,7 +676,7 @@ if ($ixxFiles.Count -gt 0) {
         $stdIfcCached = Join-Path $cacheDir 'std.ifc'
 
         if ((Test-Path $stdObjCached) -and (Test-Path $stdIfcCached)) {
-            Write-Host "[标准] 使用缓存的 std 模块" -ForegroundColor DarkGray
+            Write-Host "[鏍囧噯] 浣跨敤缂撳瓨鐨?std 妯″潡" -ForegroundColor DarkGray
             Copy-Item $stdObjCached, $stdIfcCached $PWD -Force
         }
         else {
@@ -695,15 +684,15 @@ if ($ixxFiles.Count -gt 0) {
             $msvcVer = Get-ChildItem $msvcToolsDir -Directory | Sort-Object Name -Descending | Select-Object -First 1
             $stdIxx = Join-Path $msvcVer.FullName 'modules\std.ixx'
             if (-not (Test-Path $stdIxx)) {
-                Write-Host "[错误] 未找到 std.ixx: $stdIxx" -ForegroundColor Red
+                Write-Host "[閿欒] 鏈壘鍒?std.ixx: $stdIxx" -ForegroundColor Red
                 exit 1
             }
 
-            Write-Host "[标准] 首次编译 std 模块（编译后将缓存）..." -ForegroundColor DarkGray
+            Write-Host "[鏍囧噯] 棣栨缂栬瘧 std 妯″潡锛堢紪璇戝悗灏嗙紦瀛橈級..." -ForegroundColor DarkGray
             $stdCmd = "cl $baseFlags /c /interface `"$stdIxx`""
             cmd.exe /c $stdCmd
             if ($LASTEXITCODE -ne 0) {
-                Write-Host '[错误] std 模块编译失败' -ForegroundColor Red
+                Write-Host '[閿欒] std 妯″潡缂栬瘧澶辫触' -ForegroundColor Red
                 exit 1
             }
 
@@ -719,7 +708,7 @@ if ($ixxFiles.Count -gt 0) {
         $compatIfcCached = Join-Path $cacheDir 'std.compat.ifc'
 
         if ((Test-Path $compatObjCached) -and (Test-Path $compatIfcCached)) {
-            Write-Host "[标准] 使用缓存的 std.compat 模块" -ForegroundColor DarkGray
+            Write-Host "[鏍囧噯] 浣跨敤缂撳瓨鐨?std.compat 妯″潡" -ForegroundColor DarkGray
             Copy-Item $compatObjCached, $compatIfcCached $PWD -Force
         }
         else {
@@ -727,15 +716,15 @@ if ($ixxFiles.Count -gt 0) {
             $msvcVer = Get-ChildItem $msvcToolsDir -Directory | Sort-Object Name -Descending | Select-Object -First 1
             $compatIxx = Join-Path $msvcVer.FullName 'modules\std.compat.ixx'
             if (-not (Test-Path $compatIxx)) {
-                Write-Host "[错误] 未找到 std.compat.ixx: $compatIxx" -ForegroundColor Red
+                Write-Host "[閿欒] 鏈壘鍒?std.compat.ixx: $compatIxx" -ForegroundColor Red
                 exit 1
             }
 
-            Write-Host "[标准] 首次编译 std.compat 模块（编译后将缓存）..." -ForegroundColor DarkGray
+            Write-Host "[鏍囧噯] 棣栨缂栬瘧 std.compat 妯″潡锛堢紪璇戝悗灏嗙紦瀛橈級..." -ForegroundColor DarkGray
             $compatCmd = "cl $baseFlags /c /interface `"$compatIxx`""
             cmd.exe /c $compatCmd
             if ($LASTEXITCODE -ne 0) {
-                Write-Host '[错误] std.compat 模块编译失败' -ForegroundColor Red
+                Write-Host '[閿欒] std.compat 妯″潡缂栬瘧澶辫触' -ForegroundColor Red
                 exit 1
             }
 
@@ -776,18 +765,17 @@ if ($ixxFiles.Count -gt 0) {
     }
 
     if ($sorted.Count -ne $ixxFiles.Count) {
-        Write-Host '[错误] 模块之间存在循环依赖' -ForegroundColor Red
+        Write-Host '[閿欒] 妯″潡涔嬮棿瀛樺湪寰幆渚濊禆' -ForegroundColor Red
         exit 1
     }
 
-    # 模块增量编译缓存（使用确定性哈希）
+    # 妯″潡澧為噺缂栬瘧缂撳瓨锛堜娇鐢ㄧ‘瀹氭€у搱甯岋級
     $projPath = [System.IO.Path]::GetFullPath($PWD.Path).ToLower()
     $projHash = [System.BitConverter]::ToString([System.Security.Cryptography.MD5]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes($projPath))).Replace('-','').Substring(0,8)
     $modCacheDir = Join-Path $env:TEMP "msvc_mod_cache\$projHash"
     if (-not (Test-Path $modCacheDir)) { New-Item $modCacheDir -ItemType Directory -Force | Out-Null }
 
-    # 预先恢复所有缓存的 .ifc（MSVC 按模块名命名，非源文件名）
-    Get-ChildItem $modCacheDir -Filter '*.ifc' -ErrorAction SilentlyContinue | ForEach-Object {
+    # 棰勫厛鎭㈠鎵€鏈夌紦瀛樼殑 .ifc锛圡SVC 鎸夋ā鍧楀悕鍛藉悕锛岄潪婧愭枃浠跺悕锛?    Get-ChildItem $modCacheDir -Filter '*.ifc' -ErrorAction SilentlyContinue | ForEach-Object {
         Copy-Item $_.FullName (Join-Path $PWD $_.Name) -Force
     }
 
@@ -799,8 +787,7 @@ if ($ixxFiles.Count -gt 0) {
         $objName = [System.IO.Path]::ChangeExtension($ixxName, '.obj')
         $cachedObj = Join-Path $modCacheDir $objName
 
-        # 判断是否需要重编：缓存不存在 / 源文件更新 / 依赖被重编
-        $needRecompile = $false
+        # 鍒ゆ柇鏄惁闇€瑕侀噸缂栵細缂撳瓨涓嶅瓨鍦?/ 婧愭枃浠舵洿鏂?/ 渚濊禆琚噸缂?        $needRecompile = $false
         if (-not (Test-Path $cachedObj)) {
             $needRecompile = $true
         }
@@ -816,17 +803,17 @@ if ($ixxFiles.Count -gt 0) {
         }
 
         if ($needRecompile) {
-            Write-Host "[模块] 编译 $ixxName" -ForegroundColor Magenta
+            Write-Host "[妯″潡] 缂栬瘧 $ixxName" -ForegroundColor Magenta
             $ixxCmd = "cl $baseFlags /c /interface `"$ixx`""
             cmd.exe /c $ixxCmd
             if ($LASTEXITCODE -ne 0) {
-                Write-Host "[错误] 模块编译失败: $ixxName" -ForegroundColor Red
+                Write-Host "[閿欒] 妯″潡缂栬瘧澶辫触: $ixxName" -ForegroundColor Red
                 exit 1
             }
-            # 缓存 .obj
+            # 缂撳瓨 .obj
             $localObj = Join-Path $PWD $objName
             if (Test-Path $localObj) { Copy-Item $localObj $cachedObj -Force }
-            # 缓存所有新产生的 .ifc
+            # 缂撳瓨鎵€鏈夋柊浜х敓鐨?.ifc
             Get-ChildItem $PWD -Filter '*.ifc' -ErrorAction SilentlyContinue | ForEach-Object {
                 Copy-Item $_.FullName (Join-Path $modCacheDir $_.Name) -Force
             }
@@ -834,13 +821,13 @@ if ($ixxFiles.Count -gt 0) {
         }
         else {
             $skippedCount++
-            # 恢复 .obj
+            # 鎭㈠ .obj
             Copy-Item $cachedObj (Join-Path $PWD $objName) -Force
         }
     }
 
     if ($skippedCount -gt 0) {
-        Write-Host "[模块] $skippedCount 个模块未修改，使用缓存" -ForegroundColor DarkGray
+        Write-Host "[妯″潡] $skippedCount 涓ā鍧楁湭淇敼锛屼娇鐢ㄧ紦瀛? -ForegroundColor DarkGray
     }
 
     $modObjs = @()
@@ -852,7 +839,7 @@ if ($ixxFiles.Count -gt 0) {
 
     if ($cppFiles.Count -gt 0) {
         $cppQuoted = ($cppFiles | ForEach-Object { "`"$_`"" }) -join ' '
-        Write-Host "[链接] 编译源文件并链接..." -ForegroundColor Magenta
+        Write-Host "[閾炬帴] 缂栬瘧婧愭枃浠跺苟閾炬帴..." -ForegroundColor Magenta
         $linkCmd = "cl $baseFlags /Fe:`"$exe`" $cppQuoted $modObjList$libFiles$linkFlags"
         cmd.exe /c $linkCmd
     }
@@ -868,17 +855,17 @@ else {
 }
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host '[错误] 编译失败' -ForegroundColor Red
+    Write-Host '[閿欒] 缂栬瘧澶辫触' -ForegroundColor Red
     exit 1
 }
-Write-Host "[成功] $o.exe" -ForegroundColor Green
+Write-Host "[鎴愬姛] $o.exe" -ForegroundColor Green
 
 Get-ChildItem $PWD -Filter '*.obj' -File -ErrorAction SilentlyContinue | Remove-Item -Force
 Get-ChildItem $PWD -Filter '*.ifc' -File -ErrorAction SilentlyContinue | Remove-Item -Force
 
 if ($run) {
     Write-Host ''
-    Write-Host "[运行] $o.exe $ProgramArgs" -ForegroundColor Yellow
+    Write-Host "[杩愯] $o.exe $ProgramArgs" -ForegroundColor Yellow
     Write-Host ('=' * 40) -ForegroundColor DarkGray
     if ($ProgramArgs) {
         & $exe ($ProgramArgs -split ' ')
@@ -888,5 +875,5 @@ if ($run) {
     }
     $code = $LASTEXITCODE
     Write-Host ('=' * 40) -ForegroundColor DarkGray
-    Write-Host "[结束] 退出码: $code" -ForegroundColor DarkGray
+    Write-Host "[缁撴潫] 閫€鍑虹爜: $code" -ForegroundColor DarkGray
 }

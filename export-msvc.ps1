@@ -1,36 +1,36 @@
-param(
+﻿param(
     [switch]$Force
 )
 
 Write-Host "=========================================" -ForegroundColor Cyan
-Write-Host "  MSVC 便携式工具链提取器 (Portable Exporter)" -ForegroundColor Cyan
+Write-Host "  MSVC 渚挎惡寮忓伐鍏烽摼鎻愬彇鍣?(Portable Exporter)" -ForegroundColor Cyan
 Write-Host "=========================================" -ForegroundColor Cyan
-Write-Host "正在搜索本地最新的 Visual Studio 工具链..."
+Write-Host "姝ｅ湪鎼滅储鏈湴鏈€鏂扮殑 Visual Studio 宸ュ叿閾?.."
 
-# 1. 定位 VS 安装目录
+# 1. 瀹氫綅 VS 瀹夎鐩綍
 $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
 if (-not (Test-Path $vswhere)) {
-    Write-Host "[错误] 未找到 vswhere.exe，无法定位 Visual Studio。" -ForegroundColor Red
+    Write-Host "[閿欒] 鏈壘鍒?vswhere.exe锛屾棤娉曞畾浣?Visual Studio銆? -ForegroundColor Red
     exit 1
 }
 
 $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
 if (-not $vsPath) {
-    Write-Host "[错误] 未检测到安装了 C++ 桌面工作负载的 Visual Studio。" -ForegroundColor Red
+    Write-Host "[閿欒] 鏈娴嬪埌瀹夎浜?C++ 妗岄潰宸ヤ綔璐熻浇鐨?Visual Studio銆? -ForegroundColor Red
     exit 1
 }
 
-Write-Host "[找到 VS 目录] $vsPath" -ForegroundColor Green
+Write-Host "[鎵惧埌 VS 鐩綍] $vsPath" -ForegroundColor Green
 
-# 2. 获取最高版本的 VC Tools 目录
+# 2. 鑾峰彇鏈€楂樼増鏈殑 VC Tools 鐩綍
 $vcBase = Join-Path $vsPath "VC\Tools\MSVC"
 $vcVersionDir = (Get-ChildItem $vcBase -Directory | Sort-Object Name -Descending | Select-Object -First 1).FullName
-Write-Host "[获取 VC Tools] $vcVersionDir" -ForegroundColor Green
+Write-Host "[鑾峰彇 VC Tools] $vcVersionDir" -ForegroundColor Green
 
-# 3. 获取最高版本的 Windows Kits 10 目录
+# 3. 鑾峰彇鏈€楂樼増鏈殑 Windows Kits 10 鐩綍
 $winKitsBase = "${env:ProgramFiles(x86)}\Windows Kits\10"
 if (-not (Test-Path $winKitsBase)) {
-    Write-Host "[错误] 未找到 Windows Kits 10 目录。请确保安装了 Win10/Win11 SDK。" -ForegroundColor Red
+    Write-Host "[閿欒] 鏈壘鍒?Windows Kits 10 鐩綍銆傝纭繚瀹夎浜?Win10/Win11 SDK銆? -ForegroundColor Red
     exit 1
 }
 
@@ -39,21 +39,21 @@ $libBase = Join-Path $winKitsBase "Lib"
 $binBase = Join-Path $winKitsBase "bin"
 
 $sdkVersion = (Get-ChildItem $incBase -Directory | Sort-Object Name -Descending | Select-Object -First 1).Name
-Write-Host "[获取 Windows SDK] 版本: $sdkVersion" -ForegroundColor Green
+Write-Host "[鑾峰彇 Windows SDK] 鐗堟湰: $sdkVersion" -ForegroundColor Green
 
 $wkIncDirs = Join-Path $incBase $sdkVersion
 $wkLibDirs = Join-Path $libBase $sdkVersion
 $wkBinDirs = Join-Path $binBase $sdkVersion
 
-# 4. 设置目标导出目录（与 pbuild.ps1 同目录）
-$targetBase = Join-Path $PSScriptRoot "portable_msvc"
-Write-Host "`n目标导出包路径: $targetBase" -ForegroundColor Magenta
-Write-Host "预计将占用约 2GB ~ 2.5GB 磁盘空间。" -ForegroundColor Magenta
+# 4. 璁剧疆鐩爣瀵煎嚭鐩綍锛堜笌 pbuild.ps1 鍚岀洰褰曪級
+$targetBase = Join-Path $HOME "bin\portable_msvc"
+Write-Host "`n鐩爣瀵煎嚭鍖呰矾寰? $targetBase" -ForegroundColor Magenta
+Write-Host "棰勮灏嗗崰鐢ㄧ害 2GB ~ 2.5GB 纾佺洏绌洪棿銆? -ForegroundColor Magenta
 
 if (-not $Force) {
-    $confirm = Read-Host "是否现在开始执行 robocopy 大文件提取/同步？(y/N)"
+    $confirm = Read-Host "鏄惁鐜板湪寮€濮嬫墽琛?robocopy 澶ф枃浠舵彁鍙?鍚屾锛?y/N)"
     if ($confirm -notmatch "^y(es)?`$") {
-        Write-Host "已取消。" -ForegroundColor Yellow
+        Write-Host "宸插彇娑堛€? -ForegroundColor Yellow
         exit 0
     }
 }
@@ -62,32 +62,32 @@ New-Item $targetBase -ItemType Directory -Force | Out-Null
 
 $robocopyArgs = @("/NDL", "/NFL", "/NJH", "/NJS", "/nc", "/ns", "/np", "/MT:16")
 
-# 辅助函数：调用 robocopy 镜像目录
+# 杈呭姪鍑芥暟锛氳皟鐢?robocopy 闀滃儚鐩綍
 function Sync-Folder {
     param([string]$src, [string]$dst, [string]$desc)
-    Write-Host "`n-> 正在镜像同步 [$desc] ..." -ForegroundColor Cyan
+    Write-Host "`n-> 姝ｅ湪闀滃儚鍚屾 [$desc] ..." -ForegroundColor Cyan
     cmd.exe /c "robocopy `"$src`" `"$dst`" /MIR $( $robocopyArgs -join ' ' )"
     $rc = $LASTEXITCODE
     if ($rc -lt 8) {
-        Write-Host "   同步成功！" -ForegroundColor Green
+        Write-Host "   鍚屾鎴愬姛锛? -ForegroundColor Green
     } else {
-        Write-Host "   [警告] robocopy 发生异常，退出码: $rc" -ForegroundColor Red
+        Write-Host "   [璀﹀憡] robocopy 鍙戠敓寮傚父锛岄€€鍑虹爜: $rc" -ForegroundColor Red
     }
 }
 
-# 5. 执行同步
+# 5. 鎵ц鍚屾
 $targetVC = Join-Path $targetBase "VC\Tools\MSVC\$($vcVersionDir | Split-Path -Leaf)"
 $targetWkInc = Join-Path $targetBase "Windows Kits\10\Include\$sdkVersion"
 $targetWkLib = Join-Path $targetBase "Windows Kits\10\Lib\$sdkVersion"
 $targetWkBin = Join-Path $targetBase "Windows Kits\10\bin\$sdkVersion"
 
-Sync-Folder -src $vcVersionDir -dst $targetVC -desc "编译器与本地库 (VC Tools)"
-Sync-Folder -src $wkIncDirs -dst $targetWkInc -desc "系统头文件 (SDK Include)"
-Sync-Folder -src $wkLibDirs -dst $targetWkLib -desc "系统静态库 (SDK Lib)"
-Sync-Folder -src $wkBinDirs -dst $targetWkBin -desc "系统二进制工具 (SDK bin, e.g. rc.exe)"
+Sync-Folder -src $vcVersionDir -dst $targetVC -desc "缂栬瘧鍣ㄤ笌鏈湴搴?(VC Tools)"
+Sync-Folder -src $wkIncDirs -dst $targetWkInc -desc "绯荤粺澶存枃浠?(SDK Include)"
+Sync-Folder -src $wkLibDirs -dst $targetWkLib -desc "绯荤粺闈欐€佸簱 (SDK Lib)"
+Sync-Folder -src $wkBinDirs -dst $targetWkBin -desc "绯荤粺浜岃繘鍒跺伐鍏?(SDK bin, e.g. rc.exe)"
 
 Write-Host "`n=========================================" -ForegroundColor Cyan
-Write-Host "  ✅ MSVC 工具链打包完成！" -ForegroundColor Green
-Write-Host "  打包目录: $targetBase" -ForegroundColor Green
-Write-Host "  你现在可以将此 portable_msvc 文件夹与 build-portable.ps1 作为压缩包发给其他人了。" -ForegroundColor Green
+Write-Host "  鉁?MSVC 宸ュ叿閾炬墦鍖呭畬鎴愶紒" -ForegroundColor Green
+Write-Host "  鎵撳寘鐩綍: $targetBase" -ForegroundColor Green
+Write-Host "  浣犵幇鍦ㄥ彲浠ュ皢姝?portable_msvc 鏂囦欢澶逛笌 build-portable.ps1 浣滀负鍘嬬缉鍖呭彂缁欏叾浠栦汉浜嗐€? -ForegroundColor Green
 Write-Host "=========================================" -ForegroundColor Cyan
