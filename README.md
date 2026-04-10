@@ -26,9 +26,11 @@ New-Item "$HOME\bin" -ItemType Directory -Force | Out-Null
 Copy-Item "build.ps1" "$HOME\bin\build.ps1" -Force
 
 # Windows PowerShell 5.1
+New-Item "$HOME\Documents\WindowsPowerShell" -ItemType Directory -Force | Out-Null
 Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1" -Force
 
 # PowerShell 7（可选）
+New-Item "$HOME\Documents\PowerShell" -ItemType Directory -Force | Out-Null
 Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1" -Force
 ```
 
@@ -49,9 +51,11 @@ Copy-Item "pbuild.ps1" "$HOME\bin\pbuild.ps1" -Force
 Expand-Archive "portable_msvc.zip" "$HOME\bin\portable_msvc" -Force
 
 # Windows PowerShell 5.1
+New-Item "$HOME\Documents\WindowsPowerShell" -ItemType Directory -Force | Out-Null
 Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1" -Force
 
 # PowerShell 7（可选）
+New-Item "$HOME\Documents\PowerShell" -ItemType Directory -Force | Out-Null
 Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1" -Force
 ```
 
