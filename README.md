@@ -1,49 +1,37 @@
-# VS Code + MSVC 快速编译工具
+# build — MSVC 快速编译工具
 
 > **一个 PowerShell 脚本，让你在 VS Code 里按 F5 就能编译运行 C/C++。**
 >
-> 无需 `.sln`、`CMakeLists.txt`、`launch.json` 等配置文件。 
->
-> 支持 C++20/23 Modules、`import std;`、智能依赖追踪、增量构建。
+> 无需 `.sln`、`CMakeLists.txt`、`launch.json`。
+> 支持 C++23 Modules、`import std;`、智能依赖追踪、增量编译、Debug/Release 一键切换。
 
----
-
-## 安装部署
+## 安装
 
 ### 前置要求
 
-- **Visual Studio**（Community 免费版即可），勾选 **"使用 C++ 的桌面开发"** 
+- **Visual Studio**（Community 免费版即可），勾选 **"使用 C++ 的桌面开发"**
   下载：<https://visualstudio.microsoft.com/zh-hans/downloads/>
 
-### 部署脚本
-
-在本项目目录中执行：
+### 部署
 
 ```powershell
 New-Item "$HOME\bin" -ItemType Directory -Force | Out-Null
 Copy-Item "build.ps1" "$HOME\bin\build.ps1" -Force
 
-# Windows PowerShell 5.1（系统自带）
+# Windows PowerShell 5.1
 New-Item "$HOME\Documents\WindowsPowerShell" -ItemType Directory -Force | Out-Null
 Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1" -Force
 
-# PowerShell 7（如果你安装了的话）
+# PowerShell 7（可选）
 New-Item "$HOME\Documents\PowerShell" -ItemType Directory -Force | Out-Null
 Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1" -Force
 ```
 
-部署完成后，**重启终端**，输入 `build` 看到帮助信息就成功了。
+重启终端，输入 `build` 看到帮助信息即部署成功。
 
----
+### VS Code F5 一键编译运行
 
-
-## 核心自动配置
-
-配置后，在 VS Code 中编辑任何 C/C++ 文件，**按 F5 即可自动编译并运行**。
-
-### 配置方法
-
-`Ctrl + Shift + P` → 输入 `Open Keyboard Shortcuts (JSON)` → 在 `[]` 中加入：
+`Ctrl+Shift+P` → `Open Keyboard Shortcuts (JSON)` → 添加：
 
 ```json
 {
@@ -64,106 +52,144 @@ Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\PowerShell\Microso
 }
 ```
 
-### 它会做什么？
+---
 
-```
-按下 F5
-  │
-  ├─ 自动弹出终端，cd 到当前文件目录
-  ├─ 智能追踪当前文件的 #include 和 import 依赖
-  ├─ 只编译相关文件，不拖入无关源文件
-  ├─ 代码没改？跳过编译，直接运行上次的 exe
-  └─ 代码改了？重新编译，然后运行
-```
-
-### 使用场景
-
-```
-同一个文件夹下：
-├── 作业1.cpp          ← 焦点在这里按 F5：只编译运行 作业1.cpp
-├── 作业2.cpp          ← 焦点在这里按 F5：只编译运行 作业2.cpp
-├── main.cpp           ← 焦点在这里按 F5：自动发现 lib.cpp，一起编译
-├── lib.h
-└── lib.cpp            ← 焦点在这里按 F5：反向追踪到 main.cpp，一起编译
-```
-
-------
-
-
-## 终端使用方式
-
-### 基础用法
+## 基本用法
 
 ```powershell
-build main.c -run                            # 编译并运行
-build solver.cpp -std 23 -run                # 指定 C++ 标准
-build main.cpp utils.cpp -o myapp -run       # 多文件 + 指定输出名
-build *.cpp -o app -run                      # 通配符（自动过滤 .h .txt 等）
-build processor.c -run -a "input.txt 42"     # 向程序传递命令行参数
-build legacy.c -x86 -run                     # 32 位编译
+build main.c -run                                # 单文件编译运行
+build *.cpp -o app -std 23 -run                  # 多文件 + C++23
+build main.cpp mod.ixx -o app -std latest -run   # C++ Modules
+build solver.c -run -a "input.txt 42"            # 传参运行
+build main.cpp -x86 -run                         # 32 位编译
 ```
+
+### 命令行参数
+
+| 参数 | 说明 |
+|------|------|
+| `<源文件...>` | 源文件名，支持通配符 `*.cpp` |
+| `-o <名称>` | 输出文件名（不含 .exe） |
+| `-run` | 编译后自动运行 |
+| `-std <版本>` | C++ 标准：`14` / `17` / `20` / `23` / `latest` |
+| `-smart` | 智能模式：自动追踪 `#include` / `import` 依赖 |
+| `-a <参数>` | 运行时传给程序的参数 |
+| `-x86` | 编译为 32 位（默认 64 位） |
+| `-I <路径>` | 头文件搜索路径（可多个） |
+| `-L <路径>` | 库文件搜索路径（可多个） |
+| `-libs <库名>` | 链接库名（不含 .lib，可多个） |
+
+---
+
+## 核心能力
 
 ### 智能追踪（`-smart`）
 
-`-smart` 是本工具的核心能力。它从当前文件出发，自动扫描同目录下所有源文件的 `#include` 和 `import` 语句，通过 BFS（广度优先搜索）建立双向依赖图，找出完整的关联文件集合。
+从当前文件出发，BFS 扫描 `#include` 和 `import` 建立双向依赖图，自动发现关联文件：
 
-```powershell
-build main.cpp -smart -run       # 自动追踪 main.cpp 的所有依赖并编译
-build lib.cpp -smart -run        # 从 lib.cpp 反向追踪，也能找到 main.cpp
-build homework1.cpp -smart -run  # 独立文件就只编译自身，不拖入其他文件
+```
+同一个文件夹下：
+├── main.cpp     ← F5：自动发现 lib.cpp + utils.ixx，一起编译
+├── lib.h
+├── lib.cpp      ← F5：反向追踪到 main.cpp，一起编译
+├── utils.ixx
+└── homework.cpp ← F5：独立文件，只编译自身
 ```
 
-**技术细节：**
-- 先剥离所有注释（`//` 和 `/* */`），再扫描 `#include` / `import`
-- `#include "lib.h"` → 自动关联同名的 `lib.cpp`（头文件 ↔ 实现文件匹配）
-- `import mymod;` → 自动关联提供该模块的 `.ixx` 文件
-- `import std;` / `import std.compat;` 不参与追踪（由缓存系统处理）
+### C++ Modules
 
-### C++ Modules（`.ixx`）
+- `.ixx` 模块自动调用 `cl /scanDependencies` 扫描依赖（P1689 JSON）
+- 拓扑排序，按正确顺序编译（无需手动排列）
+- `import std;` / `import std.compat;` 首次编译后自动缓存到 `%TEMP%`
+- **模块级增量编译**：仅重编修改的 `.ixx` 及其下游依赖，缓存存放在 `%TEMP%\msvc_mod_cache`
 
-```powershell
-build main.cpp mymod.ixx -o app -std latest -run
-```
+### 增量构建
 
-脚本会自动处理：
-1. 调用 `cl /scanDependencies` 扫描模块依赖（P1689 JSON，100% 准确）
-2. 拓扑排序，按正确顺序编译（即使传入顺序是乱的）
-3. `import std;` / `import std.compat;` 首次编译后自动缓存到 `%TEMP%`
-
-### 第三方库
-
-```powershell
-build main.cpp -I D:\libs\SDL2\include -L D:\libs\SDL2\lib -libs SDL2,SDL2main -run
-```
+- 源文件未修改 → 跳过编译，直接运行
+- 模块级缓存 → 只重编有变化的 `.ixx`，依赖感知级联
 
 ---
 
-## 参数一览
+## 项目配置 `msvc_list.json`
 
-| 参数 | 别名 | 说明 |
+在项目目录创建 `msvc_list.json`，实现**零命令行参数的完整项目配置**。脚本会自动向上查找最多 5 层父目录。
+
+### 最简配置
+
+```json
+{ "config": "debug" }
+```
+
+一行即可获得完整的 VS Debug 配置（`/Od /MDd /RTC1 /JMC /ZI /GS /sdl ...`）。
+
+### 完整示例
+
+```json
+{
+    "config": "debug",
+    "std": "latest",
+    "charset": "unicode",
+    "output": "MyApp",
+    "warnings": "high",
+    "defines": ["WIN32_LEAN_AND_MEAN", "NOMINMAX"],
+    "libs": ["d3d11", "dxgi", "user32", "gdi32"],
+    "include": ["../vendor/include"],
+    "libpath": ["../vendor/lib"]
+}
+```
+
+切 Release 只改一行：`"config": "release"`。
+
+### 全部字段
+
+**所有字段均可选。** `config` 设置的默认值可被其他字段覆盖。
+
+#### 项目配置
+
+| 字段 | 类型 | 说明 | 示例 |
+|------|------|------|------|
+| `config` | string | `"debug"` / `"release"` — 一键 VS 配置 | `"debug"` |
+| `std` | string | C++ 标准 | `"latest"` |
+| `output` | string | 输出名（命令行 `-o` 优先） | `"MyApp"` |
+| `charset` | string | `"unicode"` / `"mbcs"` — 自动定义宏 | `"unicode"` |
+| `subsystem` | string | `"console"` / `"windows"` — 链接器子系统 | `"windows"` |
+| `exclude` | string[] | 智能追踪时排除的文件模式 | `["test_*.cpp"]` |
+
+#### 编译器（覆盖 config 默认值）
+
+| 字段 | 说明 | debug 默认 | release 默认 |
+|------|------|-----------|-------------|
+| `optimize` | `"off"` `"size"` `"speed"` `"full"` | `"off"` → `/Od` | `"speed"` → `/O2 /Oi` |
+| `runtime` | `"dynamic"` `"static"` | `/MDd` | `/MD` |
+| `warnings` | `"off"` `"basic"` `"default"` `"high"` `"all"` | `/W3` | `/W3` |
+| `warn_as_error` | bool | `false` | `false` |
+| `debug_info` | `"off"` `"pdb"` `"edit"` `"embedded"` | `"edit"` → `/ZI` | `"pdb"` → `/Zi` |
+| `exceptions` | `"sync"` `"async"` `"none"` | `/EHsc` | `/EHsc` |
+| `rtc` | bool — 运行时检查 | `true` → `/RTC1` | `false` |
+| `jmc` | bool — Just My Code | `true` → `/JMC` | `false` |
+| `security` | bool — 缓冲区安全 | `true` → `/GS /sdl` | `true` |
+| `conformance` | bool — 标准一致性 | `false` | `false` |
+| `fp_model` | `"precise"` `"strict"` `"fast"` | `/fp:precise` | `/fp:precise` |
+
+#### 链接器（覆盖 config 默认值）
+
+| 字段 | 说明 | debug 默认 | release 默认 |
+|------|------|-----------|-------------|
+| `ltcg` | bool — 全程序优化 | `false` | `true` → `/GL /LTCG` |
+| `incremental_link` | bool — 增量链接 | `true` | `false` |
+
+#### 原始参数
+
+| 字段 | 类型 | 说明 |
 |------|------|------|
-| `Sources` | (位置参数) | 源文件，支持通配符 |
-| `-o` | `-output` | 输出文件名（不含 `.exe`） |
-| `-run` | | 编译成功后自动运行 |
-| `-std` | | C++ 标准：`14` / `17` / `20` / `23` / `latest` |
-| `-smart` | | 智能模式：自动追踪依赖 |
-| `-a` | `-ProgramArgs` | 运行时传给程序的参数 |
-| `-x86` | | 编译为 32 位（默认 64 位） |
-| `-I` | | 头文件搜索路径（可多个） |
-| `-L` | | 库文件搜索路径（可多个） |
-| `-libs` | | 链接的库名（不含 `.lib`，可多个） |
+| `defines` | string[] | 预处理器宏 |
+| `libs` | string[] | 链接库（不含 .lib） |
+| `include` | string[] | 头文件路径（相对于 JSON 所在目录） |
+| `libpath` | string[] | 库路径（相对于 JSON 所在目录） |
+| `flags` | string[] | 追加的原始编译器标志 |
+| `link_flags` | string[] | 追加的原始链接器标志 |
 
----
-
-## 支持的文件类型
-
-| 扩展名 | 说明 |
-|--------|------|
-| `.c` | C 源文件 |
-| `.cpp` `.cxx` `.cc` | C++ 源文件 |
-| `.ixx` | C++ 模块接口（自动用 `/interface` 编译） |
-
-通配符 `*` 会自动过滤掉 `.h` `.hpp` `.txt` 等非源文件。
+> **数据来源**：所有预设默认值从 VS2026 v180 工具链的 `Microsoft.Cl.Common.props` 和 `Microsoft.Link.Common.props` 官方属性文件提取，与 Visual Studio 项目模板完全一致。
 
 ---
 
@@ -174,57 +200,34 @@ build main.cpp -I D:\libs\SDL2\include -L D:\libs\SDL2\lib -libs SDL2,SDL2main -
 自己的头文件放在 **global module fragment**（`module;` ~ `export module` 之间）：
 
 ```cpp
-module;                          // global module fragment 开始
+module;                          // global module fragment
+#include "my_config.h"
+#include "some_c_library.h"
 
-#include "my_config.h"           // 自己的头文件
-#include "some_c_library.h"      // C 库头文件
+export module mymod;             // module purview
+import std;
 
-export module mymod;             // module purview 开始
-
-import std;                      // 标准库 import
-
-export void do_something() {
-    // 可以使用 #include 引入的内容 + std:: 的所有东西
-}
+export void do_something() { /* ... */ }
 ```
 
-> **禁止在 `export module` 之后 `#include` 标准库头文件**，和 `import std;` 混用会导致符号重定义。
-
-### 自定义编译选项
-
-编辑 `~/bin/build.ps1` 中的 `$baseFlags`：
-
-```powershell
-# 默认
-$baseFlags = '/nologo /W3 /utf-8 /EHsc'
-
-# 调试
-$baseFlags = '/nologo /W3 /utf-8 /EHsc /Zi /Od'
-
-# 发布
-$baseFlags = '/nologo /W3 /utf-8 /EHsc /O2'
-```
+> 禁止在 `export module` 之后 `#include` 标准库头文件，和 `import std;` 混用会导致符号重定义。
 
 ### std 模块缓存
 
-`import std;` 首次编译需要约 2-3 秒，之后自动缓存。若更新了 Visual Studio 版本导致编译报错，清除缓存即可：
+`import std;` 首次编译需约 2-3 秒，之后自动缓存。更新 Visual Studio 后若报错，清除缓存：
 
 ```powershell
 Remove-Item "$env:TEMP\msvc_std_module_cache" -Recurse -Force
 ```
 
----
+模块增量编译缓存也可清除：
 
-## 常见问题
-
-**Q: `import std;` 报错** 
-确保使用 `-std latest` 或 `-std 23`，且安装了最新 MSVC 工具集。
-
-**Q: 适合多大的项目？** 
-适合课程作业、小型练习、快速原型。大型项目建议直接用 Visual Studio。
+```powershell
+Remove-Item "$env:TEMP\msvc_mod_cache" -Recurse -Force
+```
 
 ---
 
-## 开源协议
+## 许可证
 
-本项目采用 **MIT License** 开源协议，详情见 [LICENSE](LICENSE) 文件。
+[MIT License](LICENSE)
