@@ -1,9 +1,14 @@
-# build — MSVC 快速编译工具
+# VS Code + MSVC 快速编译工具
 
-> **一个 PowerShell 脚本，让你在 VS Code 里按 F5 就能编译运行 C/C++。**
+一个专为 VS Code 编写的单文件编译脚本：**没有 `.sln`、`CMakeLists.txt`、`launch.json`，按下 F5 就能编译运行 C/C++。**
+
+> **模块化支持**：原生处理 C++20/23 Modules 及 `import std;`，内置模块缓存。
 >
-> 无需 `.sln`、`CMakeLists.txt`、`launch.json`。
-> 支持 C++23 Modules、`import std;`、智能依赖追踪、增量编译、Debug/Release 一键切换。
+> **智能推导**：基于 `#include` 和 `import` 自动爬取并编译依赖文件。
+>
+> **增量构建**：仅重新编译修改的 `.obj` 与 `.ifc`，代码无变动则直接运行。
+>
+> **对齐 MSBuild**：基于 `msvc_list.json` 支持 Debug/Release 一键切换及数百个 MSVC 原生参数的平替。
 
 ------
 
