@@ -73,49 +73,56 @@ if ($help -or -not $Sources) {
     Write-Host ''
     Write-Host 'build' -NoNewline -ForegroundColor Cyan
     Write-Host ' — MSVC 快速编译工具' -ForegroundColor DarkGray
-    Write-Host ''
     Write-Host '  用法：' -ForegroundColor DarkCyan
     Write-Host '    build <源文件...> [选项]'
     Write-Host ''
-    Write-Host '  选项：' -ForegroundColor DarkCyan
+    Write-Host '  基础选项：' -ForegroundColor DarkCyan
     Write-Host '    -o <名称>       指定输出文件名（不含 .exe）'
     Write-Host '    -run            编译成功后自动运行'
     Write-Host '    -std <版本>     C++ 标准：14 / 17 / 20 / 23 / latest'
     Write-Host '    -a <参数>       传递给程序的命令行参数'
     Write-Host '    -x86            编译为 32 位（默认 64 位）'
-    Write-Host '    -smart          智能模式：自动追踪 #include / import 关联文件'
-    Write-Host '    -I <路径...>    额外的头文件搜索路径（可多个）'
-    Write-Host '    -L <路径...>    额外的库文件搜索路径（可多个）'
+    Write-Host '    -smart          智能模式：自动通过 #include 和 import 追踪关联的源文件'
+    Write-Host ''
+    Write-Host '  路径与链接依赖：' -ForegroundColor DarkCyan
+    Write-Host '    -I <路径...>    额外的头文件包含路径 (可多个)'
+    Write-Host '    -L <路径...>    额外的库文件搜索路径 (可多个)'
     Write-Host '    -libs <库名...>   要链接的库（不含 .lib，可多个）'
-    Write-Host '    -help           显示此帮助'
+    Write-Host ''
+    Write-Host '  工业级工程配置 (与 msvc_list.json 的字段 1:1 对应，CLI 优先级最高)：' -ForegroundColor Magenta
+    Write-Host '    -config <preset>      使用官方配置预设：debug / release'
+    Write-Host '    -optimize <级别>      优化级别：off / size / speed / full'
+    Write-Host '    -runtime <动态静态>     运行库：dynamic (/MD) / static (/MT)'
+    Write-Host '    -warnings <级别>      警告：off / basic / default / high / all'
+    Write-Host '    -warn_as_error        视警告为错误 (/WX)'
+    Write-Host '    -debug_info <模式>    调试信息：off / pdb (/Zi) / edit (/ZI) / embedded (/Z7)'
+    Write-Host '    -exceptions <模式>    异常处理：sync (/EHsc) / async (/EHa) / none'
+    Write-Host '    -fp_model <模式>      浮点模型：precise / strict / fast'
+    Write-Host '    -charset <字符集>      自动宏定义：unicode (/DUNICODE) / mbcs (/D_MBCS)'
+    Write-Host '    -subsystem <子系统>     链接器子系统：console / windows'
+    Write-Host '    -rtc                  开启行时检查 (/RTC1)'
+    Write-Host '    -jmc                  开启 Just My Code 调试 (/JMC)'
+    Write-Host '    -security             开启缓冲区安全检查 (/GS /sdl)'
+    Write-Host '    -conformance          开启严格标准一致性检查 (/permissive- /Zc:...) '
+    Write-Host '    -ltcg                 开启全程序优化 (LTCG)'
+    Write-Host '    -incremental_link     启用增量链接 (/INCREMENTAL)'
+    Write-Host '    -defines <宏...>       定义预处理器宏 (可多个)'
+    Write-Host '    -flags <参数...>      追加原始编译器标志 (如 /wd4819)'
+    Write-Host '    -link_flags <参数...> 追加原始链接器标志 (如 /NODEFAULTLIB)'
     Write-Host ''
     Write-Host '  示例：' -ForegroundColor DarkCyan
-    Write-Host '    build main.c -run                                 单文件编译运行'
-    Write-Host '    build *.cpp -o app -std 23 -run                   多文件 + C++23'
-    Write-Host '    build main.cpp mod.ixx -o app -std latest -run    C++ Modules'
-    Write-Host '    build solver.c -run -a "input.txt 42"             传参运行'
-    Write-Host '    build main.cpp -I D:\libs\SDL2\include -L D:\libs\SDL2\lib -libs SDL2,SDL2main -run'
-    Write-Host '    build main.cpp -smart -std latest -run                    智能追踪依赖'
+    Write-Host '    build main.cpp -run'
+    Write-Host '    build *.cpp -o app -std 23 -config release -run'
+    Write-Host '    build main.cpp -smart -config debug -warnings high -conformance -run'
     Write-Host ''
-    Write-Host '  支持的文件类型：' -ForegroundColor DarkCyan
-    Write-Host '    .c              C 源文件'
-    Write-Host '    .cpp .cxx .cc   C++ 源文件'
-    Write-Host '    .ixx            C++ 模块接口（自动用 /interface 编译）'
+    Write-Host '  支持文件：' -ForegroundColor DarkCyan
+    Write-Host '    .c (C), .cpp / .cxx / .cc (C++), .ixx (C++20 Modules)'
+    Write-Host "    (执行 'build' 时不带源文件，可屏蔽 .h/.txt 等无关文件自动提取源内容)"
     Write-Host ''
-    Write-Host '  特性：' -ForegroundColor DarkCyan
-    Write-Host '    · 自动检测并初始化 MSVC 编译环境（无需手动调用 vcvarsall.bat）'
-    Write-Host '    · 支持 import std; 和 import std.compat;（首次自动编译，后续使用缓存）'
-    Write-Host '    · 多 .ixx 模块自动分析依赖、拓扑排序，无需手动排列顺序'
-    Write-Host '    · -smart 智能追踪：自动通过 #include 和 import 发现关联文件'
-    Write-Host '    · 支持 -I -L -libs 指定第三方库的路径和链接'
-    Write-Host '    · msvc_list.json 项目配置：定义宏、链接库、编译选项（可选）'
-    Write-Host '    · 通配符自动过滤，只编译源文件，忽略 .h .hpp .txt 等'
-    Write-Host '    · 增量构建：代码未修改时跳过编译，直接运行'
-    Write-Host '    · 编译产物自动清理（.obj .ifc）'
+    Write-Host '  详细文档与项目配置指南：' -NoNewline -ForegroundColor DarkCyan
+    Write-Host ' 参阅项目目录下的 README.md (完全支持 msvc_list.json)' -ForegroundColor DarkGray
     Write-Host ''
-    Write-Host '  详细文档：' -NoNewline -ForegroundColor DarkCyan
-    Write-Host ' README.md' -ForegroundColor DarkGray
-    Write-Host ''
+
     exit 0
 }
 
