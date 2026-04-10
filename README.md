@@ -48,6 +48,8 @@ New-Item "$HOME\bin" -ItemType Directory -Force | Out-Null
 Copy-Item "pbuild.ps1" "$HOME\bin\pbuild.ps1" -Force
 
 # 解压编译器工具链（约 2GB）
+# ⚠️ 注意：PowerShell 自带的 Expand-Archive 解压巨量小文件极其缓慢！
+# 强烈建议：直接在文件管理器中【右键 portable_msvc.zip -> 提取全部】，解压到 $HOME\bin\portable_msvc
 Expand-Archive "portable_msvc.zip" "$HOME\bin\portable_msvc" -Force
 
 # Windows PowerShell 5.1
