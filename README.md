@@ -57,14 +57,20 @@ Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\PowerShell\Microso
 ## 基本用法
 
 ```powershell
-build main.c -run                                # 单文件编译运行
+build main.cpp -run                              # 单文件编译运行
 build *.cpp -o app -std 23 -run                  # 多文件 + C++23
 build main.cpp mod.ixx -o app -std latest -run   # C++ Modules
 build solver.c -run -a "input.txt 42"            # 传参运行
 build main.cpp -x86 -run                         # 32 位编译
+build main.cpp -smart -config debug -run         # 智能追踪 + Debug 配置
+build main.cpp -config release -ltcg -run        # Release + 全程序优化
 ```
 
-### 命令行参数
+---
+
+## 命令行参数
+
+### 基础选项
 
 | 参数 | 说明 |
 |------|------|
@@ -75,9 +81,40 @@ build main.cpp -x86 -run                         # 32 位编译
 | `-smart` | 智能模式：自动追踪 `#include` / `import` 依赖 |
 | `-a <参数>` | 运行时传给程序的参数 |
 | `-x86` | 编译为 32 位（默认 64 位） |
+
+### 路径与链接
+
+| 参数 | 说明 |
+|------|------|
 | `-I <路径>` | 头文件搜索路径（可多个） |
 | `-L <路径>` | 库文件搜索路径（可多个） |
 | `-libs <库名>` | 链接库名（不含 .lib，可多个） |
+
+### 工程配置参数
+
+> 以下参数与 `msvc_list.json` 的字段 **1:1 同名对应**，优先级：**CLI > JSON > config 预设 > 内置默认值**。
+
+| 参数 | 说明 |
+|------|------|
+| `-config debug/release` | 一键使用 VS 官方配置预设 |
+| `-optimize off/size/speed/full` | 优化级别 |
+| `-runtime dynamic/static` | 运行库（`/MD` / `/MT`，debug 自动加 `d`） |
+| `-warnings off/basic/default/high/all` | 警告级别 |
+| `-warn_as_error` | 视警告为错误 (`/WX`) |
+| `-debug_info off/pdb/edit/embedded` | 调试信息格式 |
+| `-exceptions sync/async/none` | 异常处理模型 |
+| `-fp_model precise/strict/fast` | 浮点模型 |
+| `-charset unicode/mbcs` | 字符集宏定义 |
+| `-subsystem console/windows` | 链接器子系统 |
+| `-rtc` | 运行时检查 (`/RTC1`) |
+| `-jmc` | Just My Code (`/JMC`) |
+| `-security` | 缓冲区安全检查 (`/GS /sdl`) |
+| `-conformance` | 严格标准一致性 (`/permissive- /Zc:...`) |
+| `-ltcg` | 全程序优化 (`/GL /LTCG`) |
+| `-incremental_link` | 增量链接 (`/INCREMENTAL`) |
+| `-defines <宏...>` | 预处理器宏（可多个，与 JSON 合并） |
+| `-flags <标志...>` | 追加原始编译器标志（与 JSON 合并） |
+| `-link_flags <标志...>` | 追加原始链接器标志（与 JSON 合并） |
 
 ---
 
@@ -114,6 +151,8 @@ build main.cpp -x86 -run                         # 32 位编译
 
 在项目目录创建 `msvc_list.json`，实现**零命令行参数的完整项目配置**。脚本会自动向上查找最多 5 层父目录。
 
+> **所有字段均可通过同名 CLI 参数覆盖。** 例如 JSON 写 `"config": "debug"`，CLI 传 `-config release` 即可临时切换。
+
 ### 最简配置
 
 ```json
@@ -138,11 +177,11 @@ build main.cpp -x86 -run                         # 32 位编译
 }
 ```
 
-切 Release 只改一行：`"config": "release"`。
+切 Release 只改一行：`"config": "release"`，或命令行 `build main.cpp -config release -run`。
 
 ### 全部字段
 
-**所有字段均可选。** `config` 设置的默认值可被其他字段覆盖。
+**所有字段均可选。** `config` 预设的默认值可被 JSON 其他字段或 CLI 参数覆盖。
 
 #### 项目配置
 
@@ -150,7 +189,7 @@ build main.cpp -x86 -run                         # 32 位编译
 |------|------|------|------|
 | `config` | string | `"debug"` / `"release"` — 一键 VS 配置 | `"debug"` |
 | `std` | string | C++ 标准 | `"latest"` |
-| `output` | string | 输出名（命令行 `-o` 优先） | `"MyApp"` |
+| `output` | string | 输出名（CLI `-o` 优先） | `"MyApp"` |
 | `charset` | string | `"unicode"` / `"mbcs"` — 自动定义宏 | `"unicode"` |
 | `subsystem` | string | `"console"` / `"windows"` — 链接器子系统 | `"windows"` |
 | `exclude` | string[] | 智能追踪时排除的文件模式 | `["test_*.cpp"]` |
