@@ -14,53 +14,46 @@
 
 ## 安装
 
-### 前置要求
+有两种使用方式。选一种即可。
 
-- **Visual Studio**（Community 免费版即可），勾选 **"使用 C++ 的桌面开发"**
-  下载：<https://visualstudio.microsoft.com/zh-hans/downloads/>
+### 方式一：本机已装 Visual Studio
 
-### 部署
+> 适用于自己开发用。需要 Visual Studio（Community 免费版即可），勾选 **"使用 C++ 的桌面开发"**。
 
 ```powershell
 New-Item "$HOME\bin" -ItemType Directory -Force | Out-Null
 Copy-Item "build.ps1" "$HOME\bin\build.ps1" -Force
-
-# Windows PowerShell 5.1
-New-Item "$HOME\Documents\WindowsPowerShell" -ItemType Directory -Force | Out-Null
 Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1" -Force
-
-# PowerShell 7（可选）
-New-Item "$HOME\Documents\PowerShell" -ItemType Directory -Force | Out-Null
 Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1" -Force
 ```
 
-重启终端，输入 `build` 看到帮助信息即部署成功。
+重启终端，输入 `build`，看到帮助信息即成功。
 
-### 便携版部署（可选，免装 Visual Studio）
+### 方式二：便携版（免装 Visual Studio）
 
-如果目标机器**没有安装 Visual Studio**，可以使用便携版 `pbuild`：
+> 适用于发给别人，或在没有 VS 的机器上使用。需要先在一台装了 VS 的机器上提取工具链。
+
+**第一步：提取工具链**（在装了 VS 的机器上执行一次）
 
 ```powershell
-# 1. 部署便携版脚本
+# 运行提取器，自动把 cl.exe、SDK 头文件/库等打包到 $HOME\bin\portable_msvc
+& export-msvc.ps1
+```
+
+提取完成后会在 `$HOME\bin\` 下生成 `portable_msvc` 目录（约 2GB）。VS 更新后再跑一次即可增量同步。
+
+**第二步：部署**
+
+```powershell
 Copy-Item "pbuild.ps1" "$HOME\bin\pbuild.ps1" -Force
-
-# 2. 部署便携版工具链（选择以下任一方式）
-
-# 方式 A：从 GitHub Release 下载 portable_msvc.zip，解压到 $HOME\bin\
-Expand-Archive "portable_msvc.zip" "$HOME\bin\portable_msvc" -Force
-
-# 方式 B：如果本机装了 VS，用提取器自动生成（支持增量更新）
-Copy-Item "export-msvc.ps1" "$HOME\bin\export-msvc.ps1" -Force
-& "$HOME\bin\export-msvc.ps1"
+Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1" -Force
 ```
 
-部署后终端用 `pbuild` 命令，用法与 `build` 完全一致：
-```powershell
-pbuild main.cpp -run
-pbuild main.cpp -smart -config release -run
-```
+重启终端，输入 `pbuild`，看到帮助信息即成功。用法与 `build` 完全一致。
 
-### VS Code F5 一键编译运行
+**发给别人**：把 `$HOME\bin\portable_msvc` 压缩成 zip，连同 `pbuild.ps1` 和 `Microsoft.PowerShell_profile.ps1` 一起发送。对方解压到 `$HOME\bin\` 下即可使用。
+
+### VS Code 按 F5 编译运行（可选）
 
 `Ctrl+Shift+P` → `Open Keyboard Shortcuts (JSON)` → 添加：
 
