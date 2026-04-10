@@ -330,32 +330,158 @@ if (-not (Test-Path $vcvars)) {
     exit 1
 }
 
-$warnLevel = '/W3'
-if ($cfg -and $cfg.flags) {
-    foreach ($flag in $cfg.flags) {
-        if ($flag -match '^/W\d|^/Wall') { $warnLevel = $flag }
+# ═══════════════════════════════════════════════════════════════
+# 编译/链接标志构建（config 预设 + 字段覆盖）
+# 基于 VS2026 v180 MSBuild 官方属性 (Microsoft.Cl.Common.props / Microsoft.Link.Common.props)
+# ═══════════════════════════════════════════════════════════════
+
+# config 预设定义（对齐 VS 项目模板，非 toolset 裸默认）
+$presets = @{
+    debug = @{
+        optimize = 'off';       runtime = 'dynamic';   warnings = 'default'
+        warn_as_error = $false; debug_info = 'edit';    exceptions = 'sync'
+        rtc = $true;            jmc = $true;            security = $true
+        conformance = $false;   fp_model = 'precise';   ltcg = $false
+        incremental_link = $true
+        auto_defines = @('_DEBUG')
+    }
+    release = @{
+        optimize = 'speed';     runtime = 'dynamic';   warnings = 'default'
+        warn_as_error = $false; debug_info = 'pdb';     exceptions = 'sync'
+        rtc = $false;           jmc = $false;           security = $true
+        conformance = $false;   fp_model = 'precise';   ltcg = $true
+        incremental_link = $false
+        auto_defines = @('NDEBUG')
     }
 }
-$baseFlags = "/nologo $warnLevel /utf-8 /EHsc"
-# charset: unicode / mbcs
+
+# 解析预设
+$preset = $null
+if ($cfg -and $cfg.config) {
+    if ($presets.ContainsKey($cfg.config)) {
+        $preset = $presets[$cfg.config]
+    } else {
+        Write-Host "[警告] 未知 config: $($cfg.config)，忽略" -ForegroundColor Yellow
+    }
+}
+
+# 辅助函数：JSON 字段覆盖预设，否则用预设默认，否则用 fallback
+function Get-CfgVal($field, $fallback) {
+    if ($cfg -and $null -ne (& { try { $cfg.$field } catch { $null } })) {
+        return $cfg.$field
+    }
+    if ($preset -and $preset.ContainsKey($field)) { return $preset[$field] }
+    return $fallback
+}
+
+# 解析各字段
+$cfgOptimize        = Get-CfgVal 'optimize'         $null
+$cfgRuntime         = Get-CfgVal 'runtime'           $null
+$cfgWarnings        = Get-CfgVal 'warnings'          'default'
+$cfgWarnAsError     = Get-CfgVal 'warn_as_error'     $false
+$cfgDebugInfo       = Get-CfgVal 'debug_info'        $null
+$cfgExceptions      = Get-CfgVal 'exceptions'        'sync'
+$cfgRtc             = Get-CfgVal 'rtc'               $false
+$cfgJmc             = Get-CfgVal 'jmc'               $false
+$cfgSecurity        = Get-CfgVal 'security'          $false
+$cfgConformance     = Get-CfgVal 'conformance'       $false
+$cfgFpModel         = Get-CfgVal 'fp_model'          $null
+$cfgLtcg            = Get-CfgVal 'ltcg'              $false
+$cfgIncrLink        = Get-CfgVal 'incremental_link'  $null
+$isDebug = ($cfg -and $cfg.config -eq 'debug')
+
+# ── 编译标志 ──
+$baseFlags = '/nologo /utf-8'
+
+# warnings
+$warnMap = @{ off = '/W0'; basic = '/W1'; default = '/W3'; high = '/W4'; all = '/Wall' }
+if ($warnMap.ContainsKey($cfgWarnings)) { $baseFlags += " $($warnMap[$cfgWarnings])" }
+else { $baseFlags += ' /W3' }
+if ($cfgWarnAsError) { $baseFlags += ' /WX' }
+
+# exceptions
+$excMap = @{ sync = '/EHsc'; async = '/EHa'; none = '' }
+if ($excMap.ContainsKey($cfgExceptions) -and $excMap[$cfgExceptions]) {
+    $baseFlags += " $($excMap[$cfgExceptions])"
+}
+
+# optimize
+$optMap = @{ off = '/Od'; size = '/O1'; speed = '/O2'; full = '/Ox' }
+if ($cfgOptimize -and $optMap.ContainsKey($cfgOptimize)) {
+    $baseFlags += " $($optMap[$cfgOptimize])"
+    if ($cfgOptimize -eq 'speed') { $baseFlags += ' /Oi' }
+}
+
+# runtime
+if ($cfgRuntime) {
+    $rtMap = @{ dynamic = '/MD'; static = '/MT' }
+    if ($rtMap.ContainsKey($cfgRuntime)) {
+        $rtFlag = $rtMap[$cfgRuntime]
+        if ($isDebug) { $rtFlag += 'd' }
+        $baseFlags += " $rtFlag"
+    }
+}
+
+# debug info
+$diMap = @{ off = ''; pdb = '/Zi'; edit = '/ZI'; embedded = '/Z7' }
+if ($cfgDebugInfo -and $diMap.ContainsKey($cfgDebugInfo) -and $diMap[$cfgDebugInfo]) {
+    $baseFlags += " $($diMap[$cfgDebugInfo])"
+}
+
+# runtime checks (debug only)
+if ($cfgRtc -and $isDebug) { $baseFlags += ' /RTC1' }
+
+# Just My Code (debug only)
+if ($cfgJmc -and $isDebug) { $baseFlags += ' /JMC' }
+
+# security
+if ($cfgSecurity) { $baseFlags += ' /GS /sdl' }
+
+# floating point model
+$fpMap = @{ precise = '/fp:precise'; strict = '/fp:strict'; fast = '/fp:fast' }
+if ($cfgFpModel -and $fpMap.ContainsKey($cfgFpModel)) {
+    $baseFlags += " $($fpMap[$cfgFpModel])"
+}
+
+# conformance
+if ($cfgConformance) { $baseFlags += ' /permissive- /Zc:__cplusplus /Zc:preprocessor' }
+
+# LTCG (compiler side)
+if ($cfgLtcg -and -not $isDebug) { $baseFlags += ' /GL /Gy' }
+
+# 固定标志（MSBuild 默认始终开启）
+$baseFlags += ' /Zc:forScope /Zc:wchar_t /FC /diagnostics:column'
+
+# config 自动 defines
+if ($preset -and $preset.auto_defines) {
+    foreach ($ad in $preset.auto_defines) { $baseFlags += " /D$ad" }
+}
+
+# charset
 if ($cfg -and $cfg.charset) {
     if ($cfg.charset -eq 'unicode') { $baseFlags += ' /DUNICODE /D_UNICODE' }
     elseif ($cfg.charset -eq 'mbcs') { $baseFlags += ' /D_MBCS' }
 }
+
+# 用户 defines
 if ($cfg -and $cfg.defines) {
     foreach ($def in $cfg.defines) { $baseFlags += " /D$def" }
 }
+
+# 原始 flags（追加）
 if ($cfg -and $cfg.flags) {
-    foreach ($flag in $cfg.flags) {
-        if ($flag -notmatch '^/W\d|^/Wall') { $baseFlags += " $flag" }
-    }
+    foreach ($flag in $cfg.flags) { $baseFlags += " $flag" }
 }
+
+# C++ 标准
 if ($hasCpp -and $std) {
     $baseFlags += " /std:c++$std"
 }
 elseif ($ixxFiles.Count -gt 0 -and -not $std) {
     $baseFlags += ' /std:c++latest'
 }
+
+# include 路径
 foreach ($inc in $I) {
     $baseFlags += " /I`"$inc`""
 }
@@ -366,6 +492,7 @@ if ($cfg -and $cfg.include) {
     }
 }
 
+# ── 链接标志 ──
 $linkFlags = ''
 $allLibPaths = @()
 if ($L) { $allLibPaths += $L }
@@ -375,11 +502,31 @@ if ($cfg -and $cfg.libpath) {
         $allLibPaths += $resolved
     }
 }
-if ($allLibPaths.Count -gt 0 -or ($cfg -and $cfg.subsystem)) {
+
+# 判断是否需要 /link 段
+$needLinkSection = ($allLibPaths.Count -gt 0) -or ($cfg -and $cfg.subsystem) -or $preset -or ($cfg -and $cfg.link_flags)
+if ($needLinkSection) {
     $linkFlags = ' /link'
     foreach ($lp in $allLibPaths) { $linkFlags += " /LIBPATH:`"$lp`"" }
     if ($cfg -and $cfg.subsystem) {
         $linkFlags += " /SUBSYSTEM:$($cfg.subsystem.ToUpper())"
+    }
+    # config 链接预设
+    if ($preset) {
+        $linkFlags += ' /DEBUG:FULL /DYNAMICBASE /NXCOMPAT'
+        if ($cfgLtcg -and -not $isDebug) {
+            $linkFlags += ' /LTCG /OPT:REF /OPT:ICF /INCREMENTAL:NO'
+        }
+        elseif ($cfgIncrLink) {
+            $linkFlags += ' /INCREMENTAL'
+        }
+        else {
+            $linkFlags += ' /INCREMENTAL:NO'
+        }
+    }
+    # 原始 link_flags（追加）
+    if ($cfg -and $cfg.link_flags) {
+        foreach ($lf in $cfg.link_flags) { $linkFlags += " $lf" }
     }
 }
 $libFiles = ''
