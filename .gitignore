@@ -13,3 +13,7 @@ test_cpp23/
 .idea/
 msvc_build_scan_*/
 msvc_std_module_cache/
+
+portable_msvc.zip
+portable_msvc/
+

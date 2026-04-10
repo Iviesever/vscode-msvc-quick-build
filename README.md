@@ -36,6 +36,30 @@ Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\PowerShell\Microso
 
 重启终端，输入 `build` 看到帮助信息即部署成功。
 
+### 便携版部署（可选，免装 Visual Studio）
+
+如果目标机器**没有安装 Visual Studio**，可以使用便携版 `pbuild`：
+
+```powershell
+# 1. 部署便携版脚本
+Copy-Item "pbuild.ps1" "$HOME\bin\pbuild.ps1" -Force
+
+# 2. 部署便携版工具链（选择以下任一方式）
+
+# 方式 A：从 GitHub Release 下载 portable_msvc.zip，解压到 $HOME\bin\
+Expand-Archive "portable_msvc.zip" "$HOME\bin\portable_msvc" -Force
+
+# 方式 B：如果本机装了 VS，用提取器自动生成（支持增量更新）
+Copy-Item "export-msvc.ps1" "$HOME\bin\export-msvc.ps1" -Force
+& "$HOME\bin\export-msvc.ps1"
+```
+
+部署后终端用 `pbuild` 命令，用法与 `build` 完全一致：
+```powershell
+pbuild main.cpp -run
+pbuild main.cpp -smart -config release -run
+```
+
 ### VS Code F5 一键编译运行
 
 `Ctrl+Shift+P` → `Open Keyboard Shortcuts (JSON)` → 添加：
