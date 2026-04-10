@@ -21,9 +21,14 @@
 > 适用于自己开发用。需要 Visual Studio（Community 免费版即可），勾选 **"使用 C++ 的桌面开发"**。
 
 ```powershell
+# 创建脚本目录
 New-Item "$HOME\bin" -ItemType Directory -Force | Out-Null
 Copy-Item "build.ps1" "$HOME\bin\build.ps1" -Force
+
+# Windows PowerShell 5.1
 Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1" -Force
+
+# PowerShell 7（可选）
 Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1" -Force
 ```
 
@@ -45,8 +50,14 @@ Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\PowerShell\Microso
 **第二步：部署**
 
 ```powershell
+New-Item "$HOME\bin" -ItemType Directory -Force | Out-Null
 Copy-Item "pbuild.ps1" "$HOME\bin\pbuild.ps1" -Force
+
+# Windows PowerShell 5.1
 Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1" -Force
+
+# PowerShell 7（可选）
+Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1" -Force
 ```
 
 重启终端，输入 `pbuild`，看到帮助信息即成功。用法与 `build` 完全一致。
