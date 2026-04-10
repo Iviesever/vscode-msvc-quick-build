@@ -46,7 +46,7 @@ $wkLibDirs = Join-Path $libBase $sdkVersion
 $wkBinDirs = Join-Path $binBase $sdkVersion
 
 # 4. 设置目标导出目录（与 pbuild.ps1 同目录）
-$targetBase = Join-Path $HOME "bin\portable_msvc"
+$targetBase = Join-Path $PSScriptRoot "portable_msvc"
 Write-Host "`n目标导出包路径: $targetBase" -ForegroundColor Magenta
 Write-Host "预计将占用约 2GB ~ 2.5GB 磁盘空间。" -ForegroundColor Magenta
 
