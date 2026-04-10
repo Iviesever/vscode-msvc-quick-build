@@ -5,6 +5,8 @@
 > 无需 `.sln`、`CMakeLists.txt`、`launch.json`。
 > 支持 C++23 Modules、`import std;`、智能依赖追踪、增量编译、Debug/Release 一键切换。
 
+------
+
 ## 安装
 
 ### 前置要求
@@ -118,35 +120,6 @@ build main.cpp -config release -ltcg -run        # Release + 全程序优化
 
 ---
 
-## 核心能力
-
-### 智能追踪（`-smart`）
-
-从当前文件出发，BFS 扫描 `#include` 和 `import` 建立双向依赖图，自动发现关联文件：
-
-```
-同一个文件夹下：
-├── main.cpp     ← F5：自动发现 lib.cpp + utils.ixx，一起编译
-├── lib.h
-├── lib.cpp      ← F5：反向追踪到 main.cpp，一起编译
-├── utils.ixx
-└── homework.cpp ← F5：独立文件，只编译自身
-```
-
-### C++ Modules
-
-- `.ixx` 模块自动调用 `cl /scanDependencies` 扫描依赖（P1689 JSON）
-- 拓扑排序，按正确顺序编译（无需手动排列）
-- `import std;` / `import std.compat;` 首次编译后自动缓存到 `%TEMP%`
-- **模块级增量编译**：仅重编修改的 `.ixx` 及其下游依赖，缓存存放在 `%TEMP%\msvc_mod_cache`
-
-### 增量构建
-
-- 源文件未修改 → 跳过编译，直接运行
-- 模块级缓存 → 只重编有变化的 `.ixx`，依赖感知级联
-
----
-
 ## 项目配置 `msvc_list.json`
 
 在项目目录创建 `msvc_list.json`，实现**零命令行参数的完整项目配置**。脚本会自动向上查找最多 5 层父目录。
@@ -232,24 +205,32 @@ build main.cpp -config release -ltcg -run        # Release + 全程序优化
 
 ---
 
-## 高级话题
+## 核心能力
 
-### 模块中使用 #include
+### 智能追踪（`-smart`）
 
-自己的头文件放在 **global module fragment**（`module;` ~ `export module` 之间）：
+从当前文件出发，BFS 扫描 `#include` 和 `import` 建立双向依赖图，自动发现关联文件：
 
-```cpp
-module;                          // global module fragment
-#include "my_config.h"
-#include "some_c_library.h"
-
-export module mymod;             // module purview
-import std;
-
-export void do_something() { /* ... */ }
+```
+同一个文件夹下：
+├── main.cpp     ← F5：自动发现 lib.cpp + utils.ixx，一起编译
+├── lib.h
+├── lib.cpp      ← F5：反向追踪到 main.cpp，一起编译
+├── utils.ixx
+└── homework.cpp ← F5：独立文件，只编译自身
 ```
 
-> 禁止在 `export module` 之后 `#include` 标准库头文件，和 `import std;` 混用会导致符号重定义。
+### C++ Modules
+
+- `.ixx` 模块自动调用 `cl /scanDependencies` 扫描依赖（P1689 JSON）
+- 拓扑排序，按正确顺序编译（无需手动排列）
+- `import std;` / `import std.compat;` 首次编译后自动缓存到 `%TEMP%`
+- **模块级增量编译**：仅重编修改的 `.ixx` 及其下游依赖，缓存存放在 `%TEMP%\msvc_mod_cache`
+
+### 增量构建
+
+- 源文件未修改 → 跳过编译，直接运行
+- 模块级缓存 → 只重编有变化的 `.ixx`，依赖感知级联
 
 ### std 模块缓存
 
