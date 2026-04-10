@@ -23,6 +23,48 @@ param(
 
     [string[]]$libs,
 
+    # ── msvc_list.json 1:1 对应参数 ──
+    [ValidateSet('debug', 'release')]
+    [string]$config,
+
+    [ValidateSet('unicode', 'mbcs')]
+    [string]$charset,
+
+    [ValidateSet('console', 'windows')]
+    [string]$subsystem,
+
+    [ValidateSet('off', 'size', 'speed', 'full')]
+    [string]$optimize,
+
+    [ValidateSet('dynamic', 'static')]
+    [string]$runtime,
+
+    [ValidateSet('off', 'basic', 'default', 'high', 'all')]
+    [string]$warnings,
+
+    [switch]$warn_as_error,
+
+    [ValidateSet('off', 'pdb', 'edit', 'embedded')]
+    [string]$debug_info,
+
+    [ValidateSet('sync', 'async', 'none')]
+    [string]$exceptions,
+
+    [switch]$rtc,
+    [switch]$jmc,
+    [switch]$security,
+    [switch]$conformance,
+
+    [ValidateSet('precise', 'strict', 'fast')]
+    [string]$fp_model,
+
+    [switch]$ltcg,
+    [switch]$incremental_link,
+
+    [string[]]$defines,
+    [string[]]$flags,
+    [string[]]$link_flags,
+
     [Alias('h', '?')]
     [switch]$help
 )
@@ -278,7 +320,7 @@ if (Test-Path $exe) {
 $cfg = $null
 $cfgFoundDir = $null
 $searchDir = $PWD.Path
-for ($i = 0; $i -lt 5; $i++) {
+for ($lvl = 0; $lvl -lt 5; $lvl++) {
     $cfgPath = Join-Path $searchDir 'msvc_list.json'
     if (Test-Path $cfgPath) {
         $cfg = Get-Content $cfgPath -Raw | ConvertFrom-Json
@@ -355,18 +397,22 @@ $presets = @{
     }
 }
 
-# 解析预设
+# 解析预设（CLI -config > JSON config）
 $preset = $null
-if ($cfg -and $cfg.config) {
-    if ($presets.ContainsKey($cfg.config)) {
-        $preset = $presets[$cfg.config]
+$cfgConfigSrc = if ($PSBoundParameters.ContainsKey('config')) { $config } elseif ($cfg -and $cfg.config) { $cfg.config } else { $null }
+if ($cfgConfigSrc) {
+    if ($presets.ContainsKey($cfgConfigSrc)) {
+        $preset = $presets[$cfgConfigSrc]
     } else {
-        Write-Host "[警告] 未知 config: $($cfg.config)，忽略" -ForegroundColor Yellow
+        Write-Host "[警告] 未知 config: $cfgConfigSrc，忽略" -ForegroundColor Yellow
     }
 }
 
-# 辅助函数：JSON 字段覆盖预设，否则用预设默认，否则用 fallback
+# 辅助函数：CLI > JSON > 预设 > fallback
 function Get-CfgVal($field, $fallback) {
+    # CLI 参数最优先
+    if ($PSBoundParameters.ContainsKey($field)) { return $PSBoundParameters[$field] }
+    # JSON 字段
     if ($cfg -and $null -ne (& { try { $cfg.$field } catch { $null } })) {
         return $cfg.$field
     }
@@ -388,7 +434,9 @@ $cfgConformance     = Get-CfgVal 'conformance'       $false
 $cfgFpModel         = Get-CfgVal 'fp_model'          $null
 $cfgLtcg            = Get-CfgVal 'ltcg'              $false
 $cfgIncrLink        = Get-CfgVal 'incremental_link'  $null
-$isDebug = ($cfg -and $cfg.config -eq 'debug')
+# config 来源：CLI > JSON
+$activeConfig = if ($PSBoundParameters.ContainsKey('config')) { $config } elseif ($cfg -and $cfg.config) { $cfg.config } else { $null }
+$isDebug = ($activeConfig -eq 'debug')
 
 # ── 编译标志 ──
 $baseFlags = '/nologo /utf-8'
@@ -457,20 +505,27 @@ if ($preset -and $preset.auto_defines) {
     foreach ($ad in $preset.auto_defines) { $baseFlags += " /D$ad" }
 }
 
-# charset
-if ($cfg -and $cfg.charset) {
-    if ($cfg.charset -eq 'unicode') { $baseFlags += ' /DUNICODE /D_UNICODE' }
-    elseif ($cfg.charset -eq 'mbcs') { $baseFlags += ' /D_MBCS' }
+# charset (CLI > JSON)
+$cfgCharset = if ($PSBoundParameters.ContainsKey('charset')) { $charset } elseif ($cfg -and $cfg.charset) { $cfg.charset } else { $null }
+if ($cfgCharset) {
+    if ($cfgCharset -eq 'unicode') { $baseFlags += ' /DUNICODE /D_UNICODE' }
+    elseif ($cfgCharset -eq 'mbcs') { $baseFlags += ' /D_MBCS' }
 }
 
-# 用户 defines
+# 用户 defines（JSON + CLI 合并）
 if ($cfg -and $cfg.defines) {
     foreach ($def in $cfg.defines) { $baseFlags += " /D$def" }
 }
+if ($defines) {
+    foreach ($def in $defines) { $baseFlags += " /D$def" }
+}
 
-# 原始 flags（追加）
+# 原始 flags（JSON + CLI 合并）
 if ($cfg -and $cfg.flags) {
     foreach ($flag in $cfg.flags) { $baseFlags += " $flag" }
+}
+if ($PSBoundParameters.ContainsKey('flags') -and $flags) {
+    foreach ($flag in $flags) { $baseFlags += " $flag" }
 }
 
 # C++ 标准
@@ -504,12 +559,13 @@ if ($cfg -and $cfg.libpath) {
 }
 
 # 判断是否需要 /link 段
-$needLinkSection = ($allLibPaths.Count -gt 0) -or ($cfg -and $cfg.subsystem) -or $preset -or ($cfg -and $cfg.link_flags)
+$cfgSubsystem = if ($PSBoundParameters.ContainsKey('subsystem')) { $subsystem } elseif ($cfg -and $cfg.subsystem) { $cfg.subsystem } else { $null }
+$needLinkSection = ($allLibPaths.Count -gt 0) -or $cfgSubsystem -or $preset -or ($cfg -and $cfg.link_flags) -or ($PSBoundParameters.ContainsKey('link_flags') -and $link_flags)
 if ($needLinkSection) {
     $linkFlags = ' /link'
     foreach ($lp in $allLibPaths) { $linkFlags += " /LIBPATH:`"$lp`"" }
-    if ($cfg -and $cfg.subsystem) {
-        $linkFlags += " /SUBSYSTEM:$($cfg.subsystem.ToUpper())"
+    if ($cfgSubsystem) {
+        $linkFlags += " /SUBSYSTEM:$($cfgSubsystem.ToUpper())"
     }
     # config 链接预设
     if ($preset) {
@@ -524,9 +580,12 @@ if ($needLinkSection) {
             $linkFlags += ' /INCREMENTAL:NO'
         }
     }
-    # 原始 link_flags（追加）
+    # 原始 link_flags（JSON + CLI 合并）
     if ($cfg -and $cfg.link_flags) {
         foreach ($lf in $cfg.link_flags) { $linkFlags += " $lf" }
+    }
+    if ($PSBoundParameters.ContainsKey('link_flags') -and $link_flags) {
+        foreach ($lf in $link_flags) { $linkFlags += " $lf" }
     }
 }
 $libFiles = ''
@@ -551,14 +610,14 @@ if ($ixxFiles.Count -gt 0) {
 
     # 批量扫描：只调一次 vcvarsall，所有 .ixx 一起扫
     $scanBat = Join-Path $scanDir '_scan_all.bat'
-    $batLines = @("@echo off", "call `"$vcvars`" $arch >nul 2>&1")
+    $batLines = @("@echo off", "chcp 65001 >nul", "call `"$vcvars`" $arch >nul 2>&1")
     foreach ($ixx in $ixxFiles) {
         $ixxName = [System.IO.Path]::GetFileNameWithoutExtension($ixx)
         $depJson = Join-Path $scanDir "$ixxName.dep.json"
         $batLines += "cl $baseFlags /scanDependencies `"$depJson`" /c `"$ixx`" >nul 2>&1"
         $batLines += "if errorlevel 1 exit /b 1"
     }
-    $batLines -join "`r`n" | Set-Content $scanBat -Encoding ASCII
+    $batLines -join "`r`n" | Set-Content $scanBat -Encoding utf8
     cmd.exe /c "`"$scanBat`"" 2>$null >$null
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[错误] 依赖扫描失败" -ForegroundColor Red
