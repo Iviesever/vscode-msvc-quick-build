@@ -14,58 +14,39 @@
 
 ## 安装
 
-有两种使用方式。选一种即可。
-
-### 方式一：本机已装 Visual Studio
-
-> 适用于自己开发用。需要 Visual Studio（Community 免费版即可），勾选 **"使用 C++ 的桌面开发"**。
+只有一个脚本 `build.ps1`，**自动检测编译环境**：有 Visual Studio 就用 VS，有 `portable_msvc` 就用便携版。
 
 ```powershell
-# 创建脚本目录
+# 1. 部署脚本
 New-Item "$HOME\bin" -ItemType Directory -Force | Out-Null
 Copy-Item "build.ps1" "$HOME\bin\build.ps1" -Force
 
-# Windows PowerShell 5.1
+# 2. 注册 profile（Windows PowerShell 5.1）
 New-Item "$HOME\Documents\WindowsPowerShell" -ItemType Directory -Force | Out-Null
 Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1" -Force
 
-# PowerShell 7（可选）
+# 3. PowerShell 7（可选）
 New-Item "$HOME\Documents\PowerShell" -ItemType Directory -Force | Out-Null
 Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1" -Force
 ```
 
 重启终端，输入 `build`，看到帮助信息即成功。
 
-### 方式二：便携版（免装 Visual Studio）
+### 便携版（免装 Visual Studio）
 
-> 适用于发给别人，或在没有 VS 的机器上使用。`portable_msvc.zip` 已包含完整的编译器和 SDK。
+> 适用于发给别人、或在没有 VS 的机器上使用。**同一个 `build.ps1`**，只需额外解压工具链。
 
 ```powershell
-# 创建脚本目录
-New-Item "$HOME\bin" -ItemType Directory -Force | Out-Null
-
-# 部署便携版脚本
-Copy-Item "pbuild.ps1" "$HOME\bin\pbuild.ps1" -Force
-
-# 解压编译器工具链（约 2GB）
-# ⚠️ 注意：PowerShell 自带的 Expand-Archive 解压巨量小文件极其缓慢！
-# 强烈建议：直接在文件管理器中解压 portable_msvc.zip 到 C:\Users\<你的电脑用户名>\bin\portable_msvc
+# 解压编译器工具链（约 2GB）到 C:\Users\<用户名>\bin\portable_msvc
+# ⚠️ Expand-Archive 解压巨量小文件极慢，强烈建议在文件管理器中手动解压！
 Expand-Archive "portable_msvc.zip" "$HOME\bin\portable_msvc" -Force
-
-# Windows PowerShell 5.1
-New-Item "$HOME\Documents\WindowsPowerShell" -ItemType Directory -Force | Out-Null
-Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1" -Force
-
-# PowerShell 7（可选）
-New-Item "$HOME\Documents\PowerShell" -ItemType Directory -Force | Out-Null
-Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1" -Force
 ```
 
-重启终端，输入 `pbuild`，看到帮助信息即成功。用法与 `build` 完全一致。
+脚本启动时自动检测 `portable_msvc` 目录（先找脚本同目录，再找 `$HOME\bin\`），无需任何额外配置。
 
 ### VS Code 按 F5 编译运行（可选）
 
-`Ctrl+Shift+P` → `Open Keyboard Shortcuts (JSON)` → 添加（如果是便携版需将 build 替换为 pbuild）：
+`Ctrl+Shift+P` → `Open Keyboard Shortcuts (JSON)` → 添加：
 
 ```json
 {
