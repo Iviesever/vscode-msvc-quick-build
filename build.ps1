@@ -195,7 +195,15 @@ if ($smart -and $files.Count -gt 0) {
         if ($_ -eq $focusedFile) { return $true }
         if ($_ -match '\.ixx$') { return $true }
         $fc = $allCandidates[$_]
-        return -not ($fc -match '\bmain\s*\(')
+        if ($fc -match '\bmain\s*\(') { return $false }
+        # exclude 模式过滤
+        if ($cfg -and $cfg.exclude) {
+            $fn = [System.IO.Path]::GetFileName($_)
+            foreach ($pat in $cfg.exclude) {
+                if ($fn -like $pat) { return $false }
+            }
+        }
+        return $true
     } | Sort-Object)
 
     if ($files.Count -eq 0) {
@@ -230,8 +238,8 @@ if (-not $o) {
         $o = [System.IO.Path]::GetFileNameWithoutExtension($ixxFiles[0])
     }
 }
-$exe = Join-Path $PWD "$o.exe"
 
+$exe = Join-Path $PWD "$o.exe"
 # 增量构建：代码未修改时跳过编译
 if (Test-Path $exe) {
     $exeTime = (Get-Item $exe).LastWriteTime
@@ -284,6 +292,9 @@ for ($i = 0; $i -lt 5; $i++) {
 }
 
 if ($cfg -and -not $std -and $cfg.std) { $std = $cfg.std }
+# output 优先级：命令行 -o > JSON output > 自动检测
+if ($cfg -and $cfg.output -and -not $PSBoundParameters.ContainsKey('o')) { $o = $cfg.output }
+$exe = Join-Path $PWD "$o.exe"
 
 $hasCpp = ($cppFiles | Where-Object { $_ -match '\.(cpp|cxx|cc)$' }) -or ($ixxFiles.Count -gt 0)
 
@@ -326,6 +337,11 @@ if ($cfg -and $cfg.flags) {
     }
 }
 $baseFlags = "/nologo $warnLevel /utf-8 /EHsc"
+# charset: unicode / mbcs
+if ($cfg -and $cfg.charset) {
+    if ($cfg.charset -eq 'unicode') { $baseFlags += ' /DUNICODE /D_UNICODE' }
+    elseif ($cfg.charset -eq 'mbcs') { $baseFlags += ' /D_MBCS' }
+}
 if ($cfg -and $cfg.defines) {
     foreach ($def in $cfg.defines) { $baseFlags += " /D$def" }
 }
@@ -359,9 +375,12 @@ if ($cfg -and $cfg.libpath) {
         $allLibPaths += $resolved
     }
 }
-if ($allLibPaths.Count -gt 0) {
+if ($allLibPaths.Count -gt 0 -or ($cfg -and $cfg.subsystem)) {
     $linkFlags = ' /link'
     foreach ($lp in $allLibPaths) { $linkFlags += " /LIBPATH:`"$lp`"" }
+    if ($cfg -and $cfg.subsystem) {
+        $linkFlags += " /SUBSYSTEM:$($cfg.subsystem.ToUpper())"
+    }
 }
 $libFiles = ''
 $allLibs = @()
