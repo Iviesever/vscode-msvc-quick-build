@@ -36,25 +36,26 @@ Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\PowerShell\Microso
 
 ### 方式二：便携版（免装 Visual Studio）
 
-> 适用于发给别人，或在没有 VS 的机器上使用。
-
-将 `pbuild.ps1` 和 `portable_msvc/` 放在同一个目录下（比如你的项目目录），即可直接使用：
-
-```
-你的项目/
-├── pbuild.ps1
-├── portable_msvc/      ← 从 GitHub Release 下载 portable_msvc.zip 解压
-├── main.cpp
-└── ...
-```
+> 适用于发给别人，或在没有 VS 的机器上使用。`portable_msvc.zip` 已包含完整的编译器和 SDK。
 
 ```powershell
-.\pbuild.ps1 main.cpp -run
+# 创建脚本目录
+New-Item "$HOME\bin" -ItemType Directory -Force | Out-Null
+
+# 部署便携版脚本
+Copy-Item "pbuild.ps1" "$HOME\bin\pbuild.ps1" -Force
+
+# 解压编译器工具链（约 2GB）
+Expand-Archive "portable_msvc.zip" "$HOME\bin\portable_msvc" -Force
+
+# Windows PowerShell 5.1
+Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1" -Force
+
+# PowerShell 7（可选）
+Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1" -Force
 ```
 
-`portable_msvc` 包含了完整的 MSVC 编译器和 Windows SDK（约 2GB），不依赖任何已安装的 Visual Studio。
-
-> **如果你是维护者**，可使用 `export-msvc.ps1` 从本机 VS 提取最新工具链并生成 `portable_msvc/`，支持增量同步。
+重启终端，输入 `pbuild`，看到帮助信息即成功。用法与 `build` 完全一致。
 
 ### VS Code 按 F5 编译运行（可选）
 
