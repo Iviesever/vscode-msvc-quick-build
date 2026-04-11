@@ -1,6 +1,6 @@
-# VS Code + MSVC 快速编译工具
+# build — MSVC 快速编译工具
 
-一个专为 VS Code 编写的单文件编译脚本：**没有 `.sln`、`CMakeLists.txt`、`launch.json`，按下 F5 就能编译运行 C/C++。**
+与 Visual Studio 2026 MSBuild **1:1 对齐** 的 C/C++ 快速编译工具。**没有 `.sln`、`CMakeLists.txt`、`launch.json`，按下 F5 就能编译运行 C/C++。**
 
 > **模块化支持**：原生处理 C++20/23 Modules 及 `import std;`，内置模块缓存。
 >
@@ -12,29 +12,31 @@
 
 ------
 
-## 安装
+## 一键安装
 
-只有一个脚本 `build.ps1`，**自动检测编译环境**：有 Visual Studio 就用 VS，有 `portable_msvc` 就用便携版。
+双击 `install.bat`，自动完成以下操作：
 
-```powershell
-# 1. 部署脚本
-New-Item "$HOME\bin" -ItemType Directory -Force | Out-Null
-Copy-Item "build.ps1" "$HOME\bin\build.ps1" -Force
-
-# 2. 注册 profile（Windows PowerShell 5.1）
-New-Item "$HOME\Documents\WindowsPowerShell" -ItemType Directory -Force | Out-Null
-Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1" -Force
-
-# 3. PowerShell 7（可选）
-New-Item "$HOME\Documents\PowerShell" -ItemType Directory -Force | Out-Null
-Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1" -Force
-```
+1. 部署 `build.ps1` 到 `%USERPROFILE%\bin\`
+2. 部署 PowerShell profile（注册 `build` 命令）
+3. 可选解压 `portable_msvc.zip` 便携版工具链
 
 重启终端，输入 `build`，看到帮助信息即成功。
 
-### 便携版（免装 Visual Studio）
 
-> 适用于发给别人、或在没有 VS 的机器上使用。**同一个 `build.ps1`**，只需额外解压工具链。
+
+## 手动安装
+
+```powershell
+Copy-Item "build.ps1" "$HOME\bin\build.ps1" -Force
+```
+
+并在 PowerShell profile 中添加：
+
+```powershell
+function build { & pwsh.exe -NoProfile -File "$HOME\bin\build.ps1" @args }
+```
+
+解压便携版工具链，适用于在没有 VS 的机器上使用。
 
 ```powershell
 # 解压编译器工具链（约 2GB）到 C:\Users\<用户名>\bin\portable_msvc
@@ -42,9 +44,9 @@ Copy-Item "Microsoft.PowerShell_profile.ps1" "$HOME\Documents\PowerShell\Microso
 Expand-Archive "portable_msvc.zip" "$HOME\bin\portable_msvc" -Force
 ```
 
-脚本启动时自动检测 `portable_msvc` 目录（先找脚本同目录，再找 `$HOME\bin\`），无需任何额外配置。
+------
 
-### VS Code 按 F5 编译运行（可选）
+## VS Code 按 F5 编译运行
 
 `Ctrl+Shift+P` → `Open Keyboard Shortcuts (JSON)` → 添加：
 
@@ -58,7 +60,7 @@ Expand-Archive "portable_msvc.zip" "$HOME\bin\portable_msvc" -Force
             {
                 "command": "workbench.action.terminal.sendSequence",
                 "args": {
-                    "text": "cd \"${fileDirname}\" ; build \"${fileBasename}\" -smart -std latest -run\u000D"
+                    "text": "cd \"${fileDirname}\" ; build \"${fileBasename}\" -std latest -run\u000D"
                 }
             }
         ]
@@ -69,75 +71,87 @@ Expand-Archive "portable_msvc.zip" "$HOME\bin\portable_msvc" -Force
 
 ---
 
-## 基本用法
+## 全部参数
 
-```powershell
-build main.cpp -run                              # 单文件编译运行
-build *.cpp -o app -std 23 -run                  # 多文件 + C++23
-build main.cpp mod.ixx -o app -std latest -run   # C++ Modules
-build solver.c -run -a "input.txt 42"            # 传参运行
-build main.cpp -x86 -run                         # 32 位编译
-build main.cpp -smart -config debug -run         # 智能追踪 + Debug 配置
-build main.cpp -config release -ltcg -run        # Release + 全程序优化
-```
+> CLI 和 JSON **同名对应**。每个参数既可在命令行中使用，也可写入 `msvc_list.json`。  
+> 优先级：**CLI > JSON > config 预设 > 内置默认值**。
+
+| CLI | JSON | 可选值 | 说明 |
+|---|---|---|---|
+| **编译与运行** | | | |
+| `<源文件...>` | — | 文件名 / 通配符 | 源文件（`.c` `.cpp` `.cxx` `.cc` `.ixx`） |
+| `-o` | `"output"` | string | 输出文件名（不含 .exe） |
+| `-run` | — | — | 编译成功后自动运行 |
+| `-std` | `"std"` | `14` `17` `20` `23` `latest` | C++ 标准 |
+| `-a` | — | string | 运行时传给程序的命令行参数 |
+| `-x86` | — | — | 编译为 32 位（默认 64 位） |
+| `-env` | — | `vs` `portable` `auto` | 强制指定编译环境 |
+| **路径与依赖** | | | |
+| `-I` | `"include"` | string[] | 头文件包含路径 |
+| `-L` | `"libpath"` | string[] | 库文件搜索路径 |
+| `-libs` | `"libs"` | string[] | 链接库（不含 .lib） |
+| `-D` | `"defines"` | string[] | 预处理器宏定义 |
+| — | `"exclude"` | string[] | 依赖解析时排除的文件通配符 |
+| **工程配置（与 MSBuild 1:1）** | | | |
+| `-config` | `"config"` | `debug` `release` | 一键 VS 官方配置预设 |
+| `-optimize` | `"optimize"` | `Od` `O1` `O2` `Ox` | 优化级别 |
+| `-runtime` | `"runtime"` | `MD` `MDd` `MT` `MTd` | 运行库 |
+| `-warnings` | `"warnings"` | `W0` `W1` `W3` `W4` `Wall` | 警告级别 |
+| `-WX` | `"WX"` | bool | 视警告为错误 → `/WX` |
+| `-debug_info` | `"debug_info"` | `off` `Zi` `ZI` `Z7` | 调试信息格式 |
+| `-exceptions` | `"exceptions"` | `EHsc` `EHa` `off` | 异常处理模型 |
+| `-fp` | `"fp"` | `precise` `strict` `fast` | 浮点模型 → `/fp:xxx` |
+| `-charset` | `"charset"` | `unicode` `mbcs` | 字符集宏 → `/DUNICODE` `/D_MBCS` |
+| `-rtc1` | `"rtc1"` | bool | 运行时检查 → `/RTC1` |
+| `-jmc` | `"jmc"` | bool | Just My Code → `/JMC` |
+| `-sdl` | `"sdl"` | bool | 安全检查 → `/GS /sdl` |
+| `-permissive` | `"permissive"` | bool | 严格标准一致性 → `/permissive-` |
+| `-ltcg` | `"ltcg"` | bool | 全程序优化 → `/GL` + `/LTCG` |
+| `-subsystem` | `"subsystem"` | `console` `windows` | 链接器子系统 → `/SUBSYSTEM:xxx` |
+| `-incremental` | `"incremental"` | bool | 增量链接 → `/INCREMENTAL` |
+| `-flags` | `"flags"` | string[] | 追加原始编译器标志（直接透传） |
+| `-link_flags` | `"link_flags"` | string[] | 追加原始链接器标志（直接透传） |
+
+> **别名**：`-o` = `-output`，`-I` = `-include`，`-L` = `-libpath`，`-D` = `-defines`。
+
+### config 预设默认值
+
+| 参数 | debug | release |
+|---|---|---|
+| `optimize` | `Od` | `O2` |
+| `runtime` | `MDd` | `MD` |
+| `debug_info` | `ZI` | `Zi` |
+| `rtc1` | `true` → `/RTC1` | `false` |
+| `jmc` | `true` → `/JMC` | `false` |
+| `ltcg` | `false` | `true` → `/GL /LTCG` |
+| `incremental` | `true` → `/INCREMENTAL` | `false` |
+
+两个预设**共同启用**：`warnings=W3`、`exceptions=EHsc`、`fp=precise`、`sdl=true`、`subsystem=console`。  
+两个预设**均不启用**：`permissive`、`WX`、`charset`。
+
+> 使用 `-config` 时还会自动启用 MSBuild 链接标志（`/DEBUG` `/DYNAMICBASE` `/NXCOMPAT` `/MANIFEST` `/MACHINE:X64` 等）并链接 12 个 Windows 默认库（`kernel32` `user32` `gdi32` `winspool` `comdlg32` `advapi32` `shell32` `ole32` `oleaut32` `uuid` `odbc32` `odbccp32`）。
 
 ---
 
-## 命令行参数
+## 快速开始 命令行
 
-### 基础选项
-
-| 参数 | 说明 |
-|------|------|
-| `<源文件...>` | 源文件名，支持通配符 `*.cpp` |
-| `-o <名称>` | 输出文件名（不含 .exe） |
-| `-run` | 编译后自动运行 |
-| `-std <版本>` | C++ 标准：`14` / `17` / `20` / `23` / `latest` |
-| `-smart` | 智能模式：自动追踪 `#include` / `import` 依赖 |
-| `-a <参数>` | 运行时传给程序的参数 |
-| `-x86` | 编译为 32 位（默认 64 位） |
-
-### 路径与链接
-
-| 参数 | 说明 |
-|------|------|
-| `-I <路径>` | 头文件搜索路径（可多个） |
-| `-L <路径>` | 库文件搜索路径（可多个） |
-| `-libs <库名>` | 链接库名（不含 .lib，可多个） |
-
-### 工程配置参数
-
-> 以下参数与 `msvc_list.json` 的字段 **1:1 同名对应**，优先级：**CLI > JSON > config 预设 > 内置默认值**。
-
-| 参数 | 说明 |
-|------|------|
-| `-config debug/release` | 一键使用 VS 官方配置预设 |
-| `-optimize off/size/speed/full` | 优化级别 |
-| `-runtime dynamic/static` | 运行库（`/MD` / `/MT`，debug 自动加 `d`） |
-| `-warnings off/basic/default/high/all` | 警告级别 |
-| `-warn_as_error` | 视警告为错误 (`/WX`) |
-| `-debug_info off/pdb/edit/embedded` | 调试信息格式 |
-| `-exceptions sync/async/none` | 异常处理模型 |
-| `-fp_model precise/strict/fast` | 浮点模型 |
-| `-charset unicode/mbcs` | 字符集宏定义 |
-| `-subsystem console/windows` | 链接器子系统 |
-| `-rtc` | 运行时检查 (`/RTC1`) |
-| `-jmc` | Just My Code (`/JMC`) |
-| `-security` | 缓冲区安全检查 (`/GS /sdl`) |
-| `-conformance` | 严格标准一致性 (`/permissive- /Zc:...`) |
-| `-ltcg` | 全程序优化 (`/GL /LTCG`) |
-| `-incremental_link` | 增量链接 (`/INCREMENTAL`) |
-| `-defines <宏...>` | 预处理器宏（可多个，与 JSON 合并） |
-| `-flags <标志...>` | 追加原始编译器标志（与 JSON 合并） |
-| `-link_flags <标志...>` | 追加原始链接器标志（与 JSON 合并） |
+```bash
+build main.cpp -run                               # 编译运行
+build main.cpp -std latest -run                   # 指定 C++ 标准
+build main.cpp -config debug -run                 # Debug 配置（1:1 MSBuild）
+build main.cpp -config release -run               # Release 配置
+build *.cpp -o app -std 23 -config release -run   # 多文件 + Release
+build main.cpp mod.ixx -o app -std latest -run    # C++20 Modules
+build solver.c -run -a "input.txt 42"             # 传参运行
+build main.cpp -x86 -run                          # 32 位编译
+build -env vs                                     # 强制使用本机 VS
+```
 
 ---
 
 ## 项目配置 `msvc_list.json`
 
-在项目目录创建 `msvc_list.json`，实现**零命令行参数的完整项目配置**。脚本会自动向上查找最多 5 层父目录。
-
-> **所有字段均可通过同名 CLI 参数覆盖。** 例如 JSON 写 `"config": "debug"`，CLI 传 `-config release` 即可临时切换。
+在项目目录创建 `msvc_list.json`，实现**零命令行参数的完整项目配置**。脚本会自动向上查找最多 5 层父目录。所有字段名与上表 JSON 列完全一致，CLI 传参会覆盖 JSON 同名字段。
 
 ### 最简配置
 
@@ -155,74 +169,45 @@ build main.cpp -config release -ltcg -run        # Release + 全程序优化
     "std": "latest",
     "charset": "unicode",
     "output": "MyApp",
-    "warnings": "high",
     "defines": ["WIN32_LEAN_AND_MEAN", "NOMINMAX"],
-    "libs": ["d3d11", "dxgi", "user32", "gdi32"],
+    "libs": ["d3d11", "dxgi"],
     "include": ["../vendor/include"],
-    "libpath": ["../vendor/lib"]
+    "libpath": ["../vendor/lib"],
+    "exclude": ["test_*.cpp"]
 }
 ```
 
 切 Release 只改一行：`"config": "release"`，或命令行 `build main.cpp -config release -run`。
 
-### 全部字段
+> **数据来源**：所有 config 预设默认值从 VS2026 v180 工具链的 `Microsoft.Cl.Common.props` 和 `Microsoft.Link.Common.props` 官方属性文件提取，与 Visual Studio 项目模板完全一致。
 
-**所有字段均可选。** `config` 预设的默认值可被 JSON 其他字段或 CLI 参数覆盖。
+---
 
-#### 项目配置
+## 构建输出
 
-| 字段 | 类型 | 说明 | 示例 |
-|------|------|------|------|
-| `config` | string | `"debug"` / `"release"` — 一键 VS 配置 | `"debug"` |
-| `std` | string | C++ 标准 | `"latest"` |
-| `output` | string | 输出名（CLI `-o` 优先） | `"MyApp"` |
-| `charset` | string | `"unicode"` / `"mbcs"` — 自动定义宏 | `"unicode"` |
-| `subsystem` | string | `"console"` / `"windows"` — 链接器子系统 | `"windows"` |
-| `exclude` | string[] | 智能追踪时排除的文件模式 | `["test_*.cpp"]` |
+输出格式与 VS2026 IDE 输出面板一致：
 
-#### 编译器（覆盖 config 默认值）
+```
+1>  正在解析源依赖项: main.cpp, mathlib.ixx
 
-| 字段 | 说明 | debug 默认 | release 默认 |
-|------|------|-----------|-------------|
-| `optimize` | `"off"` `"size"` `"speed"` `"full"` | `"off"` → `/Od` | `"speed"` → `/O2 /Oi` |
-| `runtime` | `"dynamic"` `"static"` | `/MDd` | `/MD` |
-| `warnings` | `"off"` `"basic"` `"default"` `"high"` `"all"` | `/W3` | `/W3` |
-| `warn_as_error` | bool | `false` | `false` |
-| `debug_info` | `"off"` `"pdb"` `"edit"` `"embedded"` | `"edit"` → `/ZI` | `"pdb"` → `/Zi` |
-| `exceptions` | `"sync"` `"async"` `"none"` | `/EHsc` | `/EHsc` |
-| `rtc` | bool — 运行时检查 | `true` → `/RTC1` | `false` |
-| `jmc` | bool — Just My Code | `true` → `/JMC` | `false` |
-| `security` | bool — 缓冲区安全 | `true` → `/GS /sdl` | `true` |
-| `conformance` | bool — 标准一致性 | `false` | `false` |
-| `fp_model` | `"precise"` `"strict"` `"fast"` | `/fp:precise` | `/fp:precise` |
-
-#### 链接器（覆盖 config 默认值）
-
-| 字段 | 说明 | debug 默认 | release 默认 |
-|------|------|-----------|-------------|
-| `ltcg` | bool — 全程序优化 | `false` | `true` → `/GL /LTCG` |
-| `incremental_link` | bool — 增量链接 | `true` | `false` |
-
-#### 原始参数
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `defines` | string[] | 预处理器宏 |
-| `libs` | string[] | 链接库（不含 .lib） |
-| `include` | string[] | 头文件路径（相对于 JSON 所在目录） |
-| `libpath` | string[] | 库路径（相对于 JSON 所在目录） |
-| `flags` | string[] | 追加的原始编译器标志 |
-| `link_flags` | string[] | 追加的原始链接器标志 |
-
-> **数据来源**：所有预设默认值从 VS2026 v180 工具链的 `Microsoft.Cl.Common.props` 和 `Microsoft.Link.Common.props` 官方属性文件提取，与 Visual Studio 项目模板完全一致。
+生成开始于 14:30...
+1>------ 已启动生成: 项目: main, 配置: Debug x64 ------
+1>  正在扫描源以查找模块依赖项...
+1>  正在编译...
+1>  mathlib.ixx
+1>  main.cpp
+1>  main -> D:\project\main.exe
+========== 生成: 1 成功，0 失败，0 最新，0 已跳过 ==========
+========== 生成 于 14:30 完成，耗时 1.116 秒 ==========
+```
 
 ---
 
 ## 核心能力
 
-### 智能追踪（`-smart`）
+### 源依赖解析
 
-从当前文件出发，BFS 扫描 `#include` 和 `import` 建立双向依赖图，自动发现关联文件：
+始终自动开启。从指定文件出发，BFS 扫描 `#include` 和 `import` 建立双向依赖图，自动发现关联文件：
 
 ```
 同一个文件夹下：
@@ -233,30 +218,32 @@ build main.cpp -config release -ltcg -run        # Release + 全程序优化
 └── homework.cpp ← F5：独立文件，只编译自身
 ```
 
-### C++ Modules
+### 增量编译
+
+构建管线：`cl /scanDependencies` → `cl /c /interface *.ixx` → `cl /c *.cpp` → `link.exe`
+
+| 层级 | 行为 |
+|------|------|
+| 模块增量 | .ixx 按时间戳跳过未修改文件，变更自动传播到下游 |
+| 源文件增量 | .cpp 按时间戳跳过未修改文件，模块接口变更时保守重编 |
+| 链接增量 | 所有 .obj 均未变更时跳过 link.exe |
+| std 缓存 | 按编译标志 + 工具链版本号哈希隔离，升级工具链自动失效 |
+
+### C++20 Modules
 
 - `.ixx` 模块自动调用 `cl /scanDependencies` 扫描依赖（P1689 JSON）
-- 拓扑排序，按正确顺序编译（无需手动排列）
-- `import std;` / `import std.compat;` 首次编译后自动缓存到 `%TEMP%`
-- **模块级增量编译**：仅重编修改的 `.ixx` 及其下游依赖，缓存存放在 `%TEMP%\msvc_mod_cache`
+- Kahn 算法拓扑排序，按正确顺序编译（无需手动排列）
+- **分层并行编译**：同一拓扑层级的独立模块批量传给 `cl /MP` 并行编译
+- `import std;` / `import std.compat;` 首次编译后自动缓存
 
-### 增量构建
+### 缓存管理
 
-- 源文件未修改 → 跳过编译，直接运行
-- 模块级缓存 → 只重编有变化的 `.ixx`，依赖感知级联
-
-### std 模块缓存
-
-`import std;` 首次编译需约 2-3 秒，之后自动缓存。更新 Visual Studio 后若报错，清除缓存：
+更新 Visual Studio 后若报错，清除缓存即可：
 
 ```powershell
-Remove-Item "$env:TEMP\msvc_std_module_cache" -Recurse -Force
-```
-
-模块增量编译缓存也可清除：
-
-```powershell
-Remove-Item "$env:TEMP\msvc_mod_cache" -Recurse -Force
+Remove-Item "$env:TEMP\msvc_std_module_cache" -Recurse -Force   # std 模块
+Remove-Item "$env:TEMP\msvc_mod_cache" -Recurse -Force          # 用户模块
+Remove-Item "$env:TEMP\msvc_cpp_cache" -Recurse -Force          # 源文件
 ```
 
 ---
