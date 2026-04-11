@@ -1,15 +1,14 @@
 # build — MSVC 快速编译工具
 
-**一个单文件的 PowerShell 脚本，替代 CMake / vcxproj 的开发体验。**
-没有 `.sln`，没有 `CMakeLists.txt`，按下 F5 就能编译运行 C/C++。
+与 Visual Studio 2026 MSBuild **1:1 对齐** 的 C/C++ 快速编译工具。**没有 `.sln`、`CMakeLists.txt`、`launch.json`，按下 F5 就能编译运行 C/C++。**
 
-> **模块化构建**：原生支持 C++20/23 Modules 及 `import std;`，Kahn 算法自动拓扑排序与分层并行编译。
+> **模块化支持**：原生处理 C++20/23 Modules 及 `import std;`，内置模块缓存。
 >
-> **源依赖解析**：内置依赖图分析，基于 `#include` 和 `import` 自动爬取并发现关联的源文件。
+> **智能推导**：基于 `#include` 和 `import` 自动爬取并编译依赖文件。
 >
-> **1:1 MSBuild 对齐**：终端输出格式与 VS IDE 输出面板 1:1 对齐。提供等价的 Debug/Release 官方预设环境，参数命名直接映射原生标志（如 `-sdl`, `-fp precise`）。
+> **增量构建**：仅重新编译修改的 `.obj` 与 `.ifc`，代码无变动则直接运行。
 >
-> **极速增量**：精准控制 `.ixx` 接口变更传播，源文件基于时间戳按需重新编译。代码无改动时瞬间跳过，直接运行。
+> **对齐 MSBuild**：基于 `msvc_list.json` 支持 Debug/Release 一键切换及数百个 MSVC 原生参数的平替。
 
 ------
 
