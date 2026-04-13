@@ -749,7 +749,6 @@ function Compile-Modules([hashtable]$ctx) {
                 
                 if (-not $foundStd) {
                     Write-Host "error : 未找到 std.ixx: $stdIxx" -ForegroundColor Red
-                    Write-Host "  [诊断] C++20 Modules 需要安装 Visual Studio 2022 v17.5+ 并在安装程序中勾选 "C++ 模块" 组件" -ForegroundColor DarkGray
                     exit 1
                 }
             }
@@ -797,7 +796,6 @@ function Compile-Modules([hashtable]$ctx) {
                 
                 if (-not $foundCompat) {
                     Write-Host "error : 未找到 std.compat.ixx: $compatIxx" -ForegroundColor Red
-                    Write-Host "  [诊断] C++20 Modules 需要安装 Visual Studio 2022 v17.5+ 并在安装程序中勾选 "C++ 模块" 组件" -ForegroundColor DarkGray
                     exit 1
                 }
             }
