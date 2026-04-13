@@ -46,7 +46,9 @@ Expand-Archive "portable_msvc.zip" "$HOME\bin\portable_msvc" -Force
 
 ------
 
-## VS Code 按 F5 编译运行
+## 简便使用：VS Code 按 F5 编译运行
+
+
 
 `Ctrl+Shift+P` → `Open Keyboard Shortcuts (JSON)` → 添加：
 
@@ -69,11 +71,68 @@ Expand-Archive "portable_msvc.zip" "$HOME\bin\portable_msvc" -Force
 }
 ```
 
+
+
+------
+
+## 详细使用
+
+
+
+### 方法一：命令行（CLI）
+
+```bash
+build main.cpp -run                               # 编译运行
+build main.cpp -std latest -run                   # 指定 C++ 标准
+build main.cpp -config debug -run                 # Debug 配置（1:1 MSBuild）
+build main.cpp -config release -run               # Release 配置
+build *.cpp -o app -std 23 -config release -run   # 多文件 + Release
+build main.cpp mod.ixx -o app -std latest -run    # C++20 Modules
+build solver.c -run -a "input.txt 42"             # 传参运行
+build main.cpp -x86 -run                          # 32 位编译
+build -env vs                                     # 强制使用本机 VS
+```
+
+
+
+### 方法二：配置 `msvc_list.json`
+
+在项目目录创建 `msvc_list.json`，实现**零命令行参数的完整项目配置**。脚本会自动向上查找最多 5 层父目录。所有字段名与上表 JSON 列完全一致，CLI 传参会覆盖 JSON 同名字段。
+
+#### 最简配置
+
+```json
+{ "config": "debug" }
+```
+
+一行即可获得完整的 VS Debug 配置（`/Od /MDd /RTC1 /JMC /ZI /GS /sdl ...`）。
+
+#### 完整示例
+
+```json
+{
+    "config": "debug",
+    "std": "latest",
+    "charset": "unicode",
+    "output": "MyApp",
+    "defines": ["WIN32_LEAN_AND_MEAN", "NOMINMAX"],
+    "libs": ["d3d11", "dxgi"],
+    "include": ["../vendor/include"],
+    "libpath": ["../vendor/lib"],
+    "exclude": ["test_*.cpp"]
+}
+```
+
+切 Release 只改一行：`"config": "release"`，或命令行 `build main.cpp -config release -run`。
+
+> **数据来源**：所有 config 预设默认值从 VS2026 v180 工具链的 `Microsoft.Cl.Common.props` 和 `Microsoft.Link.Common.props` 官方属性文件提取，与 Visual Studio 项目模板完全一致。
+
 ---
 
 ## 全部参数
 
-> CLI 和 JSON **同名对应**。每个参数既可在命令行中使用，也可写入 `msvc_list.json`。  
+> CLI 和 JSON **同名对应**。每个参数既可在命令行中使用，也可写入 `msvc_list.json`。 
+>
 > 优先级：**CLI > JSON > config 预设 > 内置默认值**。
 
 | CLI | JSON | 可选值 | 说明 |
@@ -127,61 +186,13 @@ Expand-Archive "portable_msvc.zip" "$HOME\bin\portable_msvc" -Force
 | `incremental` | `true` → `/INCREMENTAL` | `false` |
 
 两个预设**共同启用**：`warnings=W3`、`exceptions=EHsc`、`fp=precise`、`sdl=true`、`subsystem=console`。  
+
 两个预设**均不启用**：`permissive`、`WX`、`charset`。
 
 > 使用 `-config` 时还会自动启用 MSBuild 链接标志（`/DEBUG` `/DYNAMICBASE` `/NXCOMPAT` `/MANIFEST` `/MACHINE:X64` 等）并链接 12 个 Windows 默认库（`kernel32` `user32` `gdi32` `winspool` `comdlg32` `advapi32` `shell32` `ole32` `oleaut32` `uuid` `odbc32` `odbccp32`）。
 
 ---
 
-## 快速开始 命令行
-
-```bash
-build main.cpp -run                               # 编译运行
-build main.cpp -std latest -run                   # 指定 C++ 标准
-build main.cpp -config debug -run                 # Debug 配置（1:1 MSBuild）
-build main.cpp -config release -run               # Release 配置
-build *.cpp -o app -std 23 -config release -run   # 多文件 + Release
-build main.cpp mod.ixx -o app -std latest -run    # C++20 Modules
-build solver.c -run -a "input.txt 42"             # 传参运行
-build main.cpp -x86 -run                          # 32 位编译
-build -env vs                                     # 强制使用本机 VS
-```
-
----
-
-## 项目配置 `msvc_list.json`
-
-在项目目录创建 `msvc_list.json`，实现**零命令行参数的完整项目配置**。脚本会自动向上查找最多 5 层父目录。所有字段名与上表 JSON 列完全一致，CLI 传参会覆盖 JSON 同名字段。
-
-### 最简配置
-
-```json
-{ "config": "debug" }
-```
-
-一行即可获得完整的 VS Debug 配置（`/Od /MDd /RTC1 /JMC /ZI /GS /sdl ...`）。
-
-### 完整示例
-
-```json
-{
-    "config": "debug",
-    "std": "latest",
-    "charset": "unicode",
-    "output": "MyApp",
-    "defines": ["WIN32_LEAN_AND_MEAN", "NOMINMAX"],
-    "libs": ["d3d11", "dxgi"],
-    "include": ["../vendor/include"],
-    "libpath": ["../vendor/lib"],
-    "exclude": ["test_*.cpp"]
-}
-```
-
-切 Release 只改一行：`"config": "release"`，或命令行 `build main.cpp -config release -run`。
-
-> **数据来源**：所有 config 预设默认值从 VS2026 v180 工具链的 `Microsoft.Cl.Common.props` 和 `Microsoft.Link.Common.props` 官方属性文件提取，与 Visual Studio 项目模板完全一致。
-
----
 
 ## 构建输出
 
