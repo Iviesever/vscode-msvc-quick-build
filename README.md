@@ -20,7 +20,7 @@
 
 ```
 vscode-msvc-quick-build/
-├── test_cpp23                         # 测试构建
+├── test_cpp23/                        # 测试构建
 |     ├─ math.ixx
 |     └─ main.cpp
 ├── install.bat                        # 一键安装脚本（双击运行）
