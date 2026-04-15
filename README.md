@@ -67,8 +67,7 @@ function build { & pwsh.exe -NoProfile -File "$HOME\bin\build.ps1" @args }
 解压便携版工具链，适用于在没有 VS 的机器上使用。
 
 ```powershell
-# 解压编译器工具链（约 2GB）到 C:\Users\<用户名>\bin\portable_msvc
-# ⚠️ Expand-Archive 解压巨量小文件极慢，强烈建议在文件管理器中手动解压！
+# 解压编译器工具链（3.48 G）到 C:\Users\<用户名>\bin\portable_msvc
 Expand-Archive "portable_msvc.zip" "$HOME\bin\portable_msvc" -Force
 ```
 
