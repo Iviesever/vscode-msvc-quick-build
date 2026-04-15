@@ -26,7 +26,7 @@
 ├── msvc_list.json                     # 项目配置文件（按需创建，参阅下文）
 ├── README.md
 ├── LICENSE
-└── portable_msvc.zip                  # 便携版 MSVC 工具链（可选，约 2GB）
+└── portable_msvc.zip                  # 便携版 MSVC 工具链（可选）
 ```
 
 
