@@ -16,10 +16,17 @@
 
 ------
 
-文件目录
+## 文件目录
 
-```cpp
-
+```
+├── build.ps1                          # 核心编译引擎
+├── install.bat                        # 一键安装脚本（双击运行）
+├── Microsoft.PowerShell_profile.ps1   # PowerShell profile（注册 build 命令）
+├── export-msvc.ps1                    # 便携版工具链导出脚本
+├── msvc_list.json                     # 项目配置文件（按需创建，参阅下文）
+├── README.md
+├── LICENSE
+└── portable_msvc.zip                  # 便携版 MSVC 工具链（可选，约 2GB）
 ```
 
 
