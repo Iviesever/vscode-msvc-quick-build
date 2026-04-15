@@ -14,6 +14,7 @@ if not exist "%PS4_DIR%" mkdir "%PS4_DIR%"
 if not exist "%PS7_DIR%" mkdir "%PS7_DIR%"
 
 echo [2/3] 部署脚本文件...
+powershell -NoProfile -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force" >nul 2>&1
 copy /Y "build.ps1" "%BIN_DIR%\build.ps1" >nul
 copy /Y "Microsoft.PowerShell_profile.ps1" "%PS4_DIR%\Microsoft.PowerShell_profile.ps1" >nul
 copy /Y "Microsoft.PowerShell_profile.ps1" "%PS7_DIR%\Microsoft.PowerShell_profile.ps1" >nul
