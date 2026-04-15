@@ -10,9 +10,9 @@
 >
 > **智能推导**：基于 `#include` 和 `import` 自动爬取并编译依赖文件。
 >
-> **增量构建**：仅重新编译修改的 `.obj` 与 `.ifc`，代码无变动则直接运行。
->
 > **对齐 MSBuild**：基于 `msvc_list.json` 支持 Debug/Release 一键切换及数百个 MSVC 原生参数的平替。
+>
+> **增量构建**：仅重新编译修改的 `.obj` 与 `.ifc`，代码无变动则直接运行。
 
 ------
 
@@ -125,7 +125,7 @@ build -env vs                                     # 强制使用本机 VS
 
 ### 方法二：配置 `msvc_list.json`
 
-在项目目录创建 `msvc_list.json`，实现**零命令行参数的完整项目配置**。脚本会自动向上查找最多 5 层父目录。所有字段名与上表 JSON 列完全一致，CLI 传参会覆盖 JSON 同名字段。
+在项目目录创建 `msvc_list.json`，实现**零命令行参数的完整项目配置**。脚本会自动向上查找最多 5 层父目录。CLI 传参会覆盖 JSON 同名字段。
 
 #### 最简配置
 
@@ -159,7 +159,7 @@ build -env vs                                     # 强制使用本机 VS
 
 ## 全部参数
 
-> CLI 和 JSON **同名对应**。每个参数既可在命令行中使用，也可写入 `msvc_list.json`。 
+> CLI 和 JSON **1 : 1对应**。每个参数既可在命令行中使用，也可写入 `msvc_list.json`。 
 >
 > 优先级：**CLI > JSON > config 预设 > 内置默认值**。
 
@@ -179,7 +179,7 @@ build -env vs                                     # 强制使用本机 VS
 | `-libs` | `"libs"` | string[] | 链接库（不含 .lib） |
 | `-D` | `"defines"` | string[] | 预处理器宏定义 |
 | — | `"exclude"` | string[] | 依赖解析时排除的文件通配符 |
-| **工程配置（与 MSBuild 1:1）** | | | |
+| **工程配置** | | | |
 | `-config` | `"config"` | `debug` `release` | 一键 VS 官方配置预设 |
 | `-optimize` | `"optimize"` | `Od` `O1` `O2` `Ox` | 优化级别 |
 | `-runtime` | `"runtime"` | `MD` `MDd` `MT` `MTd` | 运行库 |
@@ -246,7 +246,7 @@ build -env vs                                     # 强制使用本机 VS
 
 ### 源依赖解析
 
-始终自动开启。从指定文件出发，BFS 扫描 `#include` 和 `import` 建立双向依赖图，自动发现关联文件：
+从指定文件出发，BFS 扫描 `#include` 和 `import` 建立双向依赖图，自动发现关联文件：
 
 ```
 同一个文件夹下：
