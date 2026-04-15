@@ -4,7 +4,7 @@
 
 **没有 `.sln`、`CMakeLists.txt`、`launch.json`，按下 F5 就能编译运行 C/C++。**
 
-您可以选择下载 [“便携版”编译套件](https://www.123912.com/s/4Y1ovd-2sbad)（解压完仅 3.48 G），来代替下载完整的 [Visual Studio](visualstudio.microsoft.com)
+您可以选择下载 [**“便携版”编译环境**](https://www.123912.com/s/4Y1ovd-2sbad)（解压完 3.48 G），来代替下载完整的 [Visual Studio](visualstudio.microsoft.com)
 
 > **模块化支持**：原生处理 C++20/23 Modules 及 `import std;`，内置模块缓存。
 >
@@ -19,14 +19,14 @@
 ## 文件目录
 
 ```
-├── build.ps1                          # 核心编译引擎
+vscode-msvc-quick-build/
+├── test_cpp23                         # 测试构建
+|     ├─ math.ixx
+|     └─ main.cpp
 ├── install.bat                        # 一键安装脚本（双击运行）
+├── build.ps1                          # 核心编译引擎
 ├── Microsoft.PowerShell_profile.ps1   # PowerShell profile（注册 build 命令）
-├── export-msvc.ps1                    # 便携版工具链导出脚本
-├── msvc_list.json                     # 项目配置文件（按需创建，参阅下文）
-├── README.md
-├── LICENSE
-└── portable_msvc.zip                  # 便携版 MSVC 工具链（可选）
+└── portable_msvc.zip                  # 便携版 MSVC 编译环境（可选）
 ```
 
 
