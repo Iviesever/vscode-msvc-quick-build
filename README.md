@@ -1,6 +1,10 @@
 ﻿# build — MSVC 快速编译工具
 
-与 Visual Studio 2026 MSBuild **1:1 对齐** 的 C/C++ 快速编译工具。**没有 `.sln`、`CMakeLists.txt`、`launch.json`，按下 F5 就能编译运行 C/C++。**
+与 Visual Studio 2026 MSBuild **1:1 对齐** 的 C/C++ 快速编译工具。
+
+**没有 `.sln`、`CMakeLists.txt`、`launch.json`，按下 F5 就能编译运行 C/C++。**
+
+您可以选择下载 [“便携版”编译套件](https://www.123912.com/s/4Y1ovd-2sbad)（解压完仅 3.48 G），来代替下载完整的 [Visual Studio](visualstudio.microsoft.com)
 
 > **模块化支持**：原生处理 C++20/23 Modules 及 `import std;`，内置模块缓存。
 >
@@ -12,13 +16,24 @@
 
 ------
 
-## 一键安装
+文件目录
+
+```cpp
+
+```
+
+
+
 
 > **首次使用 PowerShell 脚本？** 需要先在 PowerShell 中执行一次（仅需一次）：
 >
 > ```powershell
 > Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 > ```
+
+## 一键安装
+
+
 
 双击 `install.bat`，自动完成以下操作：
 
